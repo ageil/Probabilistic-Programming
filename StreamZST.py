@@ -22,20 +22,29 @@ with open(file, 'rb') as fh:
                 object = json.loads(line)
 
                 # do something with the object here
-                post = dict()
-                post['id'] = object['id']
-                post['created_utc'] = object['created_utc']
-                post['subreddit_id'] = object['subreddit_id']
-                post['title'] = object['title']
-                post['url'] = object['url']
-                post['author'] = object['author']
-                post['subreddit'] = object['subreddit']
-                post['domain'] = object['domain']
-                post['score'] = object['score']
-                post['num_comments'] = object['num_comments']
+                vars = ['id', 'created_utc', 'subreddit_id', 'title', 'url',
+                        'author', 'subreddit', 'domain', 'score', 'num_comments']
+                try:
+                    post = dict()
+                    for var in vars:
+                        try:
+                            post[var] = object[var]
+                        except:
+                            pass
 
-                with open(target_file, 'a') as tf:
-                    json.dump(post, tf)
-                    tf.write('\n')
+                    if 'id' in post.keys():
+                        with open(target_file, 'a') as tf:
+                            json.dump(post, tf)
+                            tf.write('\n')
+                    else:
+                        print('Missing ID:')
+                        print(file)
+                        print("Line {}: {}".format(i, line))
+                        print("Skipping...\n")
+                except:
+                    print('Error in:')
+                    print(file)
+                    print("Line {}: {}".format(i, line))
+                    print("Skipping...\n")
 
             previous_line = lines[-1]
