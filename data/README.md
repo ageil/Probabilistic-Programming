@@ -3,7 +3,7 @@
 Prerequisites:
 - A working installation of AsterixDB running at localhost:19002
 - Reddit developer credentials
-- Google FactCheck Explorer credentials
+- Google FactCheck Explorer credentials cookie
 
 Steps:
 1. Collect ClaimReviews from Google FactCheck Explorer (collect_reviews.py)
