@@ -49,6 +49,7 @@ for idx, (pid, created_utc) in enumerate(post_ids.items()):
         comments = list(api.search_comments(link_id=pid))
         num_comments = len(comments)
         comment_data = {'pid': pid, 'api_num_comments': num_comments}
+        comment_data['comments'] = []
         for c in comments:
             delta_sec = datetime.fromtimestamp(c.created_utc) - post_datetime
             attributes = dict()
@@ -60,7 +61,7 @@ for idx, (pid, created_utc) in enumerate(post_ids.items()):
             attributes['body_len'] = len(c.body)
             attributes['parent_id'] = c.parent_id
             attributes['delta_seconds'] = delta_sec.seconds
-            comment_data['comments'] = attributes
+            comment_data['comments'].append(attributes)
         with open('/Users/ageil/Github/FactMap/Data/comments.json', 'a') as f:
             json.dump(comment_data, f)
             f.write('\n')

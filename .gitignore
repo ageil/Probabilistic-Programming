@@ -105,4 +105,4 @@ requirements.in
 mypythonfile.py
 
 # credentials
-data collection/credentials.py
+data/credentials.py
