@@ -6,12 +6,11 @@ Prerequisites:
 - Google FactCheck Explorer credentials
 
 Steps:
-1. Data collection
-    1. Collect ClaimReviews via 1. Data collection (data_collection.py)
-    2. Download Reddit submissions from https://files.pushshift.io/reddit/submissions/
-2. Data processing
-    1. Process downloaded Reddit submissions (StreamZST/XZ/BZ2.py)
-    2. Create AsterixDB tables, insert Reddit posts + ClaimReviews, join tables (AsterixDB_data_wrangling.py)
-    3. Collect corresponding comments via PushShift live API (comments_api.py)
+1. Collect ClaimReviews from Google FactCheck Explorer (collect_reviews.py)
+2. Download Reddit submissions from https://files.pushshift.io/reddit/submissions/
+3. Process downloaded Reddit submissions (StreamZST/XZ/BZ2.py)
+4. Create AsterixDB tables, insert Reddit posts + ClaimReviews, join tables (process_asterix.py)
+5. Process review ratings (process_ratings.py)
+6. Collect corresponding comments via PushShift live API (collect_comments.py)
 
 Note: The resulting datasets can be found in the /data/results folder. 
