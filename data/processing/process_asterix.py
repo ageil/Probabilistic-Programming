@@ -1,10 +1,10 @@
-from asterixdb.asterixdb import AsterixConnection
-from glob import glob
 import pickle
+from glob import glob
 
+from asterixdb.asterixdb import AsterixConnection
 
 # connect to AsterixDB
-con = AsterixConnection(server='http://localhost', port=19002)
+con = AsterixConnection(server="http://localhost", port=19002)
 
 # Reddit #
 
@@ -14,10 +14,10 @@ con = AsterixConnection(server='http://localhost', port=19002)
 rt_paths = sorted(glob("/Users/ageil/Github/FactMap/Data/reddit/new/*.json"))
 combined = ""
 for p in rt_paths:
-    combined += 'localhost://' + p + ','
+    combined += "localhost://" + p + ","
 combined = combined[:-1]  # remove last ,
 
-q = '''
+q = """
     USE FactMap;
 
     DROP TYPE submissionTypeTemp IF EXISTS;
@@ -31,11 +31,14 @@ q = '''
 
     LOAD DATASET PostsTemp
     USING localfs (("path"="{0}"),("format"="json"));
-    '''.format(combined)
+    """.format(
+    combined
+)
 response = con.query(q)
 
 # Cast to intended data format and clean up temp table:
-response = con.query('''
+response = con.query(
+    """
     USE FactMap;
 
     DROP DATASET posts IF EXISTS;
@@ -58,14 +61,16 @@ response = con.query('''
     FROM PostsTemp p;
 
     DROP DATASET PostsTemp IF EXISTS;
-    ''')
+    """
+)
 # note: use `UPSERT INTO` to protect against duplicate ids
 
 
 # ClaimReview #
 
 # Load all claims, generate uid:
-response = con.query('''
+response = con.query(
+    """
     USE FactMap;
 
     DROP TYPE ReviewsType IF EXISTS;
@@ -80,10 +85,12 @@ response = con.query('''
     LOAD DATASET claims
     USING localfs (("path"="localhost:///Users/ageil/Github/FactMap/Data/
     claimreviews/claims_2020_combined.json"),("format"="json"));
-    ''')
+    """
+)
 
 # Clean up formatting:
-response = con.query('''
+response = con.query(
+    """
     USE FactMap;
 
     CREATE DATASET reviews(ReviewsType)
@@ -107,10 +114,12 @@ response = con.query('''
     FROM claims c;
 
     DROP DATASET claims IF EXISTS;
-    ''')
+    """
+)
 
 # Save subset with valid/invalid ratings:
-rated = con.query('''
+rated = con.query(
+    """
     USE FactMap;
 
     SELECT r.*
@@ -118,8 +127,10 @@ rated = con.query('''
     WHERE r.reviewRating.bestRating >= r.reviewRating.ratingValue
     AND r.reviewRating.ratingValue >= r.reviewRating.worstRating
     AND r.reviewRating.bestRating > r.reviewRating.worstRating;
-''').results
-unrated = con.query('''
+"""
+).results
+unrated = con.query(
+    """
     USE FactMap;
 
     SELECT r.*
@@ -130,22 +141,24 @@ unrated = con.query('''
     OR is_null(r.reviewRating.ratingValue)
     OR is_null(r.reviewRating.worstRating)
     OR is_null(r.reviewRating.bestRating);
-''').results
+"""
+).results
 
-with open('/Users/ageil/Github/FactMap/RNN/data/rated_2020.pickle', 'wb') as f:
+with open("/Users/ageil/Github/FactMap/RNN/data/rated_2020.pickle", "wb") as f:
     pickle.dump(rated, f, pickle.HIGHEST_PROTOCOL)
-print('num rated:', len(rated))
+print("num rated:", len(rated))
 
-with open('/Users/ageil/Github/FactMap/RNN/data/unrated.pickle', 'wb') as f:
+with open("/Users/ageil/Github/FactMap/RNN/data/unrated.pickle", "wb") as f:
     pickle.dump(unrated, f, pickle.HIGHEST_PROTOCOL)
-print('num unrated:', len(unrated))
+print("num unrated:", len(unrated))
 
 
 # Joining #
 
 # Hard join (claims = news articles)
 # Join on full fake news source URL.
-response = con.query('''
+response = con.query(
+    """
     USE FactMap;
 
     SET `compiler.joinmemory` "128MB";
@@ -165,28 +178,34 @@ response = con.query('''
     SELECT *
     FROM posts p, reviews r
     WHERE r.claimAuthor.claimURL = p.url;
-    ''')
+    """
+)
 
-response = con.query('''
+response = con.query(
+    """
     USE FactMap;
 
     SELECT u.*
     FROM urljoin u;
-    ''')
-print('Number of matches:', len(response.results))
+    """
+)
+print("Number of matches:", len(response.results))
 
 # So how many unique claimreviews are represented?
-response = con.query('''
+response = con.query(
+    """
     USE FactMap;
 
     SELECT count(distinct r.uid) as c
     FROM urljoin u
     LIMIT 1;
-    ''')
-print('Number of unique claims:', response.results[0]['c'])
+    """
+)
+print("Number of unique claims:", response.results[0]["c"])
 
 # And how many of the ratings are numerically valid/invalid?
-response = con.query('''
+response = con.query(
+    """
     USE FactMap;
 
     SELECT count(distinct r.uid) as c
@@ -198,10 +217,12 @@ response = con.query('''
     AND
     r.reviewRating.ratingValue <= r.reviewRating.bestRating)
     LIMIT 1;
-    ''')
-print('Number of unique, valid numerical ratings:', response.results[0]['c'])
+    """
+)
+print("Number of unique, valid numerical ratings:", response.results[0]["c"])
 
-response = con.query('''
+response = con.query(
+    """
     USE FactMap;
 
     SELECT count(distinct r.uid) as c
@@ -214,12 +235,14 @@ response = con.query('''
     AND
     r.reviewRating.ratingValue <= r.reviewRating.bestRating)
     LIMIT 1;
-    ''')
-print('Number of unique, invalid numerical ratings:', response.results[0]['c'])
+    """
+)
+print("Number of unique, invalid numerical ratings:", response.results[0]["c"])
 
 
 # Hard join (review articles) #
-response = con.query('''
+response = con.query(
+    """
     USE FactMap;
 
     SET `compiler.joinmemory` "128MB";
@@ -233,28 +256,34 @@ response = con.query('''
     SELECT *
     FROM posts p, reviews r
     WHERE r.reviewUrl = p.url;
-    ''')
+    """
+)
 
-response = con.query('''
+response = con.query(
+    """
     USE FactMap;
 
     SELECT u.*
     FROM facturljoin u;
-    ''')
-print('Number of matches:', len(response.results))
+    """
+)
+print("Number of matches:", len(response.results))
 
-response = con.query('''
+response = con.query(
+    """
     USE FactMap;
 
     SELECT COUNT(DISTINCT r.uid) unique_claims
     FROM facturljoin f;
-    ''')
-print('Number of unique claims', response.results[0]['unique_claims'])
+    """
+)
+print("Number of unique claims", response.results[0]["unique_claims"])
 
 # So there's actually more corrected news posted to reddit than fake news!
 
 # Most cross-posts
-response = con.query('''
+response = con.query(
+    """
     USE FactMap;
 
     SELECT COUNT(r.uid) as c, g
@@ -263,12 +292,13 @@ response = con.query('''
     GROUP AS g
     ORDER BY c desc
     LIMIT 5;
-    ''').results
+    """
+).results
 
 for i in response:
-    print("Number of cross-posts:", i['c'])
+    print("Number of cross-posts:", i["c"])
 
-    subs = [p['f']['p']['subreddit'] for p in i['g']]
+    subs = [p["f"]["p"]["subreddit"] for p in i["g"]]
     print("Subreddits:\n", subs)
     print()
 
@@ -296,7 +326,8 @@ for i in response:
 #     titles must be at least 20% of the shortest title.
 
 # Create table for fuzzy URL join:
-response = con.query('''
+response = con.query(
+    """
     USE FactMap;
 
     SET `compiler.joinmemory` "128MB";
@@ -305,10 +336,12 @@ response = con.query('''
 
     CREATE DATASET fuzzyurljoin(PostReviewType)
         PRIMARY KEY r.uid, p.id;
-    ''')
+    """
+)
 
 # Get URL matches with same-length review and post titles (Jaccard sim. > 20%):
-response = con.query('''
+response = con.query(
+    """
         USE FactMap;
 
         INSERT INTO fuzzyurljoin
@@ -324,11 +357,13 @@ response = con.query('''
             AND (array_min([length(r.claimReviewed), length(p.title)]) > 15)
             AND (contains(p.domain, "wikipedia")
             OR contains(p.domain, "twitter"));
-        ''')
+        """
+)
 
 # Get URL matches with different-length review and post titles
 # (edit distance > 0.5 * min(review or post title length)):
-response = con.query('''
+response = con.query(
+    """
     USE FactMap;
 
     INSERT INTO fuzzyurljoin
@@ -351,10 +386,12 @@ response = con.query('''
             AND (array_min([length(r.claimReviewed), length(p.title)]) > 15)
             AND (contains(p.domain, "wikipedia")
             OR contains(p.domain, "twitter"));
-    ''')
+    """
+)
 
 # Add back all other url-joined pairs that are not linked to wiki or twitter:
-response = con.query('''
+response = con.query(
+    """
     USE FactMap;
 
     INSERT INTO fuzzyurljoin
@@ -362,26 +399,32 @@ response = con.query('''
     FROM urljoin u
     WHERE NOT (contains(p.domain, "wikipedia")
     OR contains(p.domain, "twitter"));
-    ''')
+    """
+)
 
 # Count total number of (fuzzy) url joined matches:
-response = con.query('''
+response = con.query(
+    """
     USE FactMap;
 
     SELECT COUNT(*) as total
     FROM fuzzyurljoin u;
-    ''')
-print('Number of matches:', response.results[0]['total'])
+    """
+)
+print("Number of matches:", response.results[0]["total"])
 
-response = con.query('''
+response = con.query(
+    """
     USE FactMap;
 
     SELECT COUNT(DISTINCT r.uid) unique_claims
     FROM fuzzyurljoin f;
-    ''')
-print('Number of unique claims', response.results[0]['unique_claims'])
+    """
+)
+print("Number of unique claims", response.results[0]["unique_claims"])
 
-response = con.query('''
+response = con.query(
+    """
     USE FactMap;
 
     SELECT count(distinct r.uid) as c
@@ -393,10 +436,12 @@ response = con.query('''
     AND
     r.reviewRating.ratingValue <= r.reviewRating.bestRating)
     LIMIT 1;
-    ''')
-print('Number of unique, valid numerical ratings:', response.results[0]['c'])
+    """
+)
+print("Number of unique, valid numerical ratings:", response.results[0]["c"])
 
-response = con.query('''
+response = con.query(
+    """
     USE FactMap;
 
     SELECT count(distinct r.uid) as c
@@ -409,5 +454,6 @@ response = con.query('''
     AND
     r.reviewRating.ratingValue <= r.reviewRating.bestRating)
     LIMIT 1;
-    ''')
-print('Number of unique, invalid numerical ratings:', response.results[0]['c'])
+    """
+)
+print("Number of unique, invalid numerical ratings:", response.results[0]["c"])

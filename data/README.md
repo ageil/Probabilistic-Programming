@@ -13,4 +13,4 @@ Steps:
 5. Process review ratings (process_ratings.py)
 6. Collect corresponding comments via PushShift live API (collect_comments.py)
 
-Note: The resulting datasets can be found in the /data/results folder. 
+Note: The resulting datasets can be found in the /data/results folder.
