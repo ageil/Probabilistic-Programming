@@ -1,3 +1,4 @@
+import numpy as np
 import pyro
 import pyro.distributions as dist
 import torch
@@ -256,3 +257,35 @@ def complete_guide(
         gate = pyro.sample("gate", dist.Beta(gate_alpha, gate_beta))
 
     return eta, phi, beta, theta, tau, rho, gate
+
+
+def get_y_pred(
+    p_data, t_data, s_data, r_data, p_types, p_stories, p_subreddits
+):
+    eta_loc = pyro.param("eta_loc").detach()
+    beta_loc = pyro.param("beta_loc").detach()
+    tau_loc = pyro.param("tau_loc").detach()
+
+    phi = torch.matmul(eta_loc, t_data.T)
+    theta = torch.matmul(beta_loc, s_data.T)
+    rho = torch.matmul(tau_loc, r_data.T)
+
+    t = torch.Tensor(p_types).long()
+    s = torch.Tensor(p_stories).long()
+    r = torch.Tensor(p_subreddits).long()
+
+    indeps = torch.tensor(p_data)
+
+    t_coefs = torch.tensor(phi[:, t])  # (num_p_indeps,num_posts)
+    s_coefs = torch.tensor(theta[:, s])  # (num_p_indeps,num_posts)
+    r_coefs = torch.tensor(rho[:, r])  # (num_p_indeps,num_posts)
+
+    mu = (
+        torch.mul(t_coefs, indeps.T)
+        + torch.mul(s_coefs, indeps.T)
+        + torch.mul(r_coefs, indeps.T)
+    ).sum(dim=0)
+
+    y_pred = np.exp(mu)
+
+    return y_pred
