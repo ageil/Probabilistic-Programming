@@ -73,3 +73,6 @@ The first thing we will do after cloning your repository is:
 ```
 
 If your repository fails any checks, we will **deduct 20%** from your final project grade.
+
+### Development Note:
+To develop with pre-commit hooks, make sure to run `pre-commit install` before making your first commit.
