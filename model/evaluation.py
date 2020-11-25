@@ -1,7 +1,6 @@
 import arviz as az
 import matplotlib.pyplot as plt
 import numpy as np
-from data_proc import transform_data
 from pyro.infer import Predictive
 
 P_INDEP_DICT = {1: "Comments in First Hour", 2: "Subscribers"}
@@ -12,27 +11,6 @@ LABELS = [
     "Review of Factual News",
     "Review of Fake News",
 ]
-
-
-# only works for simple regression!
-def get_smooth_p_data(x_range):
-    n_per_type_obs = len(x_range)
-    num_types = 4
-
-    original_smooth_p_data = np.empty((n_per_type_obs * num_types, 2))
-
-    smooth_p_types = np.empty((n_per_type_obs * num_types))
-
-    for t in range(num_types):
-        start_idx = n_per_type_obs * t
-        end_idx = n_per_type_obs * (t + 1)
-        original_smooth_p_data[start_idx:end_idx, 0] = 1
-        original_smooth_p_data[start_idx:end_idx, 1] = x_range
-        smooth_p_types[start_idx:end_idx] = t
-
-    smooth_p_data = transform_data(original_smooth_p_data)
-
-    return original_smooth_p_data, smooth_p_data, smooth_p_types
 
 
 # only_type should be one of 0, 1, 2, or 3, corresponding to the type of post.

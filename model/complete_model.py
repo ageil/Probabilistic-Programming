@@ -72,12 +72,7 @@ def complete_model(
                 eta, t_data[t, :].T
             )  # (num_p_indeps, num_t_indeps) x (num_t_indeps, num_types)
 
-            phi_loc_means = get_means(phi_loc, p_types)
-            phi_loc_centered = phi_loc - phi_loc_means
-
-            phi = pyro.sample(
-                "phi", dist.Normal(phi_loc_centered, coef_scale_prior)
-            )
+            phi = pyro.sample("phi", dist.Normal(phi_loc, coef_scale_prior))
 
         # Story Level
 
@@ -89,11 +84,8 @@ def complete_model(
                 beta, s_data[s, :].T
             )  # (num_p_indeps, num_s_indeps) x (num_s_indeps, num_stories)
 
-            theta_loc_means = get_means(theta_loc, p_stories)
-            theta_loc_centered = theta_loc - theta_loc_means
-
             theta = pyro.sample(
-                "theta", dist.Normal(theta_loc_centered, coef_scale_prior)
+                "theta", dist.Normal(theta_loc, coef_scale_prior)
             )
 
         # Subreddit Level
@@ -106,16 +98,7 @@ def complete_model(
                 tau, r_data[r, :].T
             )  # (num_p_indeps, num_r_indeps) x (num_r_indeps, num_subreddits)
 
-            rho_loc_means = get_means(rho_loc, p_subreddits)
-            rho_loc_centered = rho_loc - rho_loc_means
-
-            rho = pyro.sample(
-                "rho", dist.Normal(rho_loc_centered, coef_scale_prior)
-            )
-
-        # Shared -- exactly the means being subtracted out.
-        gamma_loc = phi_loc_means + theta_loc_means + rho_loc_means
-        gamma = pyro.sample("gamma", dist.Uniform(gamma_loc, gamma_loc + 1e-5))
+            rho = pyro.sample("rho", dist.Normal(rho_loc, coef_scale_prior))
 
     # Gate
 
@@ -141,7 +124,6 @@ def complete_model(
         t_coefs = phi[:, t]  # (num_p_indeps,num_posts)
         s_coefs = theta[:, s]  # (num_p_indeps,num_posts)
         r_coefs = rho[:, r]  # (num_p_indeps,num_posts)
-        shared_coefs = gamma.repeat((1, num_posts))  # (num_p_indeps,num_posts)
 
         type_level_products = torch.mul(
             t_coefs, indeps.T
@@ -152,16 +134,12 @@ def complete_model(
         subreddit_level_products = torch.mul(
             r_coefs, indeps.T
         )  # (num_p_indeps, num_posts) .* (num_p_indeps, num_posts)
-        shared_products = torch.mul(
-            shared_coefs, indeps.T
-        )  # (num_p_indeps, num_posts) .* (num_p_indeps, num_posts)
 
         # calculate the mean: desired shape (num_posts, 1)
         mu = (
             subreddit_level_products
             + type_level_products
             + story_level_products
-            + shared_products
         ).sum(
             dim=0
         )  # (num_p_indeps, num_posts).sum(over indeps)
@@ -264,10 +242,7 @@ def complete_guide(
                 eta, t_data[t, :].T
             )  # (num_p_indeps, num_t_indeps) x (num_t_indeps, num_types)
 
-            phi_loc_means = get_means(phi_loc, p_types)
-            phi_loc_centered = phi_loc - phi_loc_means
-
-            phi = pyro.sample("phi", dist.Normal(phi_loc_centered, phi_scale))
+            phi = pyro.sample("phi", dist.Normal(phi_loc, phi_scale))
 
         # story level
 
@@ -279,12 +254,7 @@ def complete_guide(
                 beta, s_data[s, :].T
             )  # (num_p_indeps, num_s_indeps) x (num_s_indeps, num_stories)
 
-            theta_loc_means = get_means(theta_loc, p_stories)
-            theta_loc_centered = theta_loc - theta_loc_means
-
-            theta = pyro.sample(
-                "theta", dist.Normal(theta_loc_centered, theta_scale)
-            )
+            theta = pyro.sample("theta", dist.Normal(theta_loc, theta_scale))
 
         # subreddit level
 
@@ -296,14 +266,7 @@ def complete_guide(
                 tau, r_data[r, :].T
             )  # (num_p_indeps, num_r_indeps) x (num_r_indeps, num_subreddits)
 
-            rho_loc_means = get_means(rho_loc, p_subreddits)
-            rho_loc_centered = rho_loc - rho_loc_means
-
-            rho = pyro.sample("rho", dist.Normal(rho_loc_centered, rho_scale))
-
-        # shared -- exactly the means being subtracted out.
-        gamma_loc = phi_loc_means + theta_loc_means + rho_loc_means
-        gamma = pyro.sample("gamma", dist.Uniform(gamma_loc, gamma_loc + 1e-5))
+            rho = pyro.sample("rho", dist.Normal(rho_loc, rho_scale))
 
     # Gate
 
@@ -320,7 +283,7 @@ def complete_guide(
     with pyro.plate("type2", num_types, dim=-1):
         gate = pyro.sample("gate", dist.Beta(gate_alpha, gate_beta))
 
-    return eta, phi, beta, theta, tau, rho, gate, gamma
+    return eta, phi, beta, theta, tau, rho, gate
 
 
 def get_y_pred(
@@ -338,11 +301,11 @@ def get_y_pred(
     s = torch.Tensor(p_stories).long()
     r = torch.Tensor(p_subreddits).long()
 
-    indeps = torch.tensor(p_data)
+    indeps = torch.Tensor(p_data)
 
-    t_coefs = torch.tensor(phi[:, t])  # (num_p_indeps,num_posts)
-    s_coefs = torch.tensor(theta[:, s])  # (num_p_indeps,num_posts)
-    r_coefs = torch.tensor(rho[:, r])  # (num_p_indeps,num_posts)
+    t_coefs = phi[:, t]  # (num_p_indeps,num_posts)
+    s_coefs = theta[:, s]  # (num_p_indeps,num_posts)
+    r_coefs = rho[:, r]  # (num_p_indeps,num_posts)
 
     mu = (
         torch.mul(t_coefs, indeps.T)
@@ -355,19 +318,34 @@ def get_y_pred(
     return y_pred
 
 
-def get_type_only_y_pred(p_data, t_data, s_data, r_data, p_types):
+def get_type_only_y_pred(p_data, t_data, p_types, s_means, r_means):
     eta_loc = pyro.param("eta_loc").detach()
 
     phi = torch.matmul(eta_loc, t_data.T)
 
     t = torch.Tensor(p_types).long()
 
-    indeps = torch.tensor(p_data)
+    indeps = torch.Tensor(p_data)
 
-    t_coefs = torch.tensor(phi[:, t])  # (num_p_indeps,num_posts)
+    t_coefs = phi[:, t]  # (num_p_indeps,num_posts)
+    total_coefs = t_coefs + s_means + r_means
 
-    mu = (torch.mul(t_coefs, indeps.T)).sum(dim=0)
+    mu = (torch.mul(total_coefs, indeps.T)).sum(dim=0)
 
     y_pred = np.exp(mu)
 
     return y_pred
+
+
+def get_s_means(p_stories, s_data):
+    beta_loc = pyro.param("beta_loc").detach()
+    theta_loc = torch.matmul(beta_loc, s_data.T)
+    s_means = get_means(theta_loc, p_stories)
+    return s_means
+
+
+def get_r_means(p_subreddits, r_data):
+    tau_loc = pyro.param("tau_loc").detach()
+    rho_loc = torch.matmul(tau_loc, r_data.T)
+    r_means = get_means(rho_loc, p_subreddits)
+    return r_means
