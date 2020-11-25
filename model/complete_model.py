@@ -5,7 +5,8 @@ import torch
 from pyro.distributions import constraints
 
 
-def get_centered(loc, p_groups):
+# returns a (num_p_indeps, 1) tensor of means w.r.t the groups.
+def get_means(loc, p_groups):
 
     num_posts = len(p_groups)
     num_groups = loc.shape[1]
@@ -28,9 +29,8 @@ def get_centered(loc, p_groups):
     # loc_means = loc.mean(dim=-1, keepdim=True)
 
     # enforce the mean across groups to be 0.
-    loc_centered = loc - loc_means
 
-    return loc_centered
+    return loc_means
 
 
 def complete_model(
@@ -61,12 +61,6 @@ def complete_model(
         (num_p_indeps, num_r_indeps), dtype=torch.float64
     )
 
-    # shared priors
-    gamma_loc = torch.zeros((num_p_indeps, 1), dtype=torch.float64)
-    gamma_scale = coef_scale_prior * torch.ones(
-        (num_p_indeps, 1), dtype=torch.float64
-    )
-
     with pyro.plate("p_indep", num_p_indeps, dim=-2):
 
         # Type Level
@@ -78,7 +72,8 @@ def complete_model(
                 eta, t_data[t, :].T
             )  # (num_p_indeps, num_t_indeps) x (num_t_indeps, num_types)
 
-            phi_loc_centered = get_centered(phi_loc, p_types)
+            phi_loc_means = get_means(phi_loc, p_types)
+            phi_loc_centered = phi_loc - phi_loc_means
 
             phi = pyro.sample(
                 "phi", dist.Normal(phi_loc_centered, coef_scale_prior)
@@ -94,7 +89,8 @@ def complete_model(
                 beta, s_data[s, :].T
             )  # (num_p_indeps, num_s_indeps) x (num_s_indeps, num_stories)
 
-            theta_loc_centered = get_centered(theta_loc, p_stories)
+            theta_loc_means = get_means(theta_loc, p_stories)
+            theta_loc_centered = theta_loc - theta_loc_means
 
             theta = pyro.sample(
                 "theta", dist.Normal(theta_loc_centered, coef_scale_prior)
@@ -110,15 +106,16 @@ def complete_model(
                 tau, r_data[r, :].T
             )  # (num_p_indeps, num_r_indeps) x (num_r_indeps, num_subreddits)
 
-            rho_loc_centered = get_centered(rho_loc, p_subreddits)
+            rho_loc_means = get_means(rho_loc, p_subreddits)
+            rho_loc_centered = rho_loc - rho_loc_means
 
             rho = pyro.sample(
                 "rho", dist.Normal(rho_loc_centered, coef_scale_prior)
             )
 
-        # Shared
-        gamma_dist = dist.Normal(gamma_loc, gamma_scale)
-        gamma = pyro.sample("gamma", gamma_dist)
+        # Shared -- exactly the means being subtracted out.
+        gamma_loc = phi_loc_means + theta_loc_means + rho_loc_means
+        gamma = pyro.sample("gamma", dist.Uniform(gamma_loc, gamma_loc + 1e-5))
 
     # Gate
 
@@ -255,16 +252,6 @@ def complete_guide(
         constraint=constraints.positive,
     )  # share among all subreddits.
 
-    gamma_loc = pyro.param(
-        "gamma_loc", torch.zeros((num_p_indeps, 1), dtype=torch.float64)
-    )  # share among all.
-
-    gamma_scale = pyro.param(
-        "gamma_scale",
-        coef_scale_prior * torch.ones((num_p_indeps, 1), dtype=torch.float64),
-        constraint=constraints.positive,
-    )  # share among all.
-
     with pyro.plate("p_indep", num_p_indeps, dim=-2):
 
         # type level
@@ -277,7 +264,8 @@ def complete_guide(
                 eta, t_data[t, :].T
             )  # (num_p_indeps, num_t_indeps) x (num_t_indeps, num_types)
 
-            phi_loc_centered = get_centered(phi_loc, p_types)
+            phi_loc_means = get_means(phi_loc, p_types)
+            phi_loc_centered = phi_loc - phi_loc_means
 
             phi = pyro.sample("phi", dist.Normal(phi_loc_centered, phi_scale))
 
@@ -291,7 +279,8 @@ def complete_guide(
                 beta, s_data[s, :].T
             )  # (num_p_indeps, num_s_indeps) x (num_s_indeps, num_stories)
 
-            theta_loc_centered = get_centered(theta_loc, p_stories)
+            theta_loc_means = get_means(theta_loc, p_stories)
+            theta_loc_centered = theta_loc - theta_loc_means
 
             theta = pyro.sample(
                 "theta", dist.Normal(theta_loc_centered, theta_scale)
@@ -307,12 +296,14 @@ def complete_guide(
                 tau, r_data[r, :].T
             )  # (num_p_indeps, num_r_indeps) x (num_r_indeps, num_subreddits)
 
-            rho_loc_centered = get_centered(rho_loc, p_subreddits)
+            rho_loc_means = get_means(rho_loc, p_subreddits)
+            rho_loc_centered = rho_loc - rho_loc_means
 
             rho = pyro.sample("rho", dist.Normal(rho_loc_centered, rho_scale))
 
-        # shared
-        gamma = pyro.sample("gamma", dist.Normal(gamma_loc, gamma_scale))
+        # shared -- exactly the means being subtracted out.
+        gamma_loc = phi_loc_means + theta_loc_means + rho_loc_means
+        gamma = pyro.sample("gamma", dist.Uniform(gamma_loc, gamma_loc + 1e-5))
 
     # Gate
 
@@ -338,7 +329,6 @@ def get_y_pred(
     eta_loc = pyro.param("eta_loc").detach()
     beta_loc = pyro.param("beta_loc").detach()
     tau_loc = pyro.param("tau_loc").detach()
-    gamma = pyro.param("gamma_loc").detach()
 
     phi = torch.matmul(eta_loc, t_data.T)
     theta = torch.matmul(beta_loc, s_data.T)
@@ -348,26 +338,16 @@ def get_y_pred(
     s = torch.Tensor(p_stories).long()
     r = torch.Tensor(p_subreddits).long()
 
-    phi_centered = get_centered(phi, t)
-    theta_centered = get_centered(theta, s)
-    rho_centered = get_centered(rho, r)
-
     indeps = torch.tensor(p_data)
 
-    num_posts = p_data.shape[0]
-
-    t_coefs = torch.tensor(phi_centered[:, t])  # (num_p_indeps,num_posts)
-    s_coefs = torch.tensor(theta_centered[:, s])  # (num_p_indeps,num_posts)
-    r_coefs = torch.tensor(rho_centered[:, r])  # (num_p_indeps,num_posts)
-    shared_coefs = torch.tensor(gamma).repeat(
-        (1, num_posts)
-    )  # (num_p_indeps,num_posts)
+    t_coefs = torch.tensor(phi[:, t])  # (num_p_indeps,num_posts)
+    s_coefs = torch.tensor(theta[:, s])  # (num_p_indeps,num_posts)
+    r_coefs = torch.tensor(rho[:, r])  # (num_p_indeps,num_posts)
 
     mu = (
         torch.mul(t_coefs, indeps.T)
         + torch.mul(s_coefs, indeps.T)
         + torch.mul(r_coefs, indeps.T)
-        + torch.mul(shared_coefs, indeps.T)
     ).sum(dim=0)
 
     y_pred = np.exp(mu)
@@ -377,26 +357,16 @@ def get_y_pred(
 
 def get_type_only_y_pred(p_data, t_data, s_data, r_data, p_types):
     eta_loc = pyro.param("eta_loc").detach()
-    gamma = pyro.param("gamma_loc").detach()
 
     phi = torch.matmul(eta_loc, t_data.T)
 
     t = torch.Tensor(p_types).long()
 
-    phi_centered = get_centered(phi, t)
-
     indeps = torch.tensor(p_data)
 
-    num_posts = p_data.shape[0]
+    t_coefs = torch.tensor(phi[:, t])  # (num_p_indeps,num_posts)
 
-    t_coefs = torch.tensor(phi_centered[:, t])  # (num_p_indeps,num_posts)
-    shared_coefs = torch.tensor(gamma).repeat(
-        (1, num_posts)
-    )  # (num_p_indeps,num_posts)
-
-    mu = (
-        torch.mul(t_coefs, indeps.T) + torch.mul(shared_coefs, indeps.T)
-    ).sum(dim=0)
+    mu = (torch.mul(t_coefs, indeps.T)).sum(dim=0)
 
     y_pred = np.exp(mu)
 
