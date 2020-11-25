@@ -76,7 +76,7 @@ def processData(items, comments, minutes=60):
     p_types = np.empty((len(items),))
     y = np.empty((len(items),))
 
-    num_p_indep = 7
+    num_p_indep = 8
     p_data = np.zeros((len(items), num_p_indep))
 
     # set bias
@@ -87,6 +87,7 @@ def processData(items, comments, minutes=60):
         # post-level
         isNews = "isFakeStory" in n["r"]["reviewRating"]
         news_id = n["p"]["id"]
+        subscribers = max(n["p"]["subscribers"], 0)
 
         # story-level
         story_id = n["r"]["uid"]
@@ -141,16 +142,16 @@ def processData(items, comments, minutes=60):
         p_data[i, 3] = np.mean(c_ups) if c_ups else 0.0
         p_data[i, 4] = np.std(c_ups) if c_ups else 0.0
         p_data[i, 5] = len(unique_authors) if unique_authors else 0.0
+        p_data[i, 7] = subscribers
 
     # Adjust p_data
 
     # normalize avg net upvotes by std net upvotes:
-    # TODO should we do this +1?
-    p_data[:, 3] = p_data[:, 3] / (p_data[:, 4] + 1)
+    p_data[:, 3] = p_data[:, 3] / (p_data[:, 4] + 1)  # add 1 to avoid div by 0
 
     # select relevant indep vars
-    # bias, avg cmt length, avg net upvotes, num authors, num initial comments
-    p_data = p_data[:, (0, 1, 3, 5, 6)]
+    # bias, avg cmt length, avg net upvotes, num authors, num initial comments, subscribers
+    p_data = p_data[:, (0, 6, 7)]
 
     data_tuple = (p_data, t_data, s_data, r_data, y)
     lookup_tuple = (p_types, p_stories, p_subreddits)
@@ -163,17 +164,20 @@ def transform_data(original_p_data):
     p_data = original_p_data.copy()
 
     # num initial comments
-    p_data[:, 4] = np.log(p_data[:, 4] + 1)
+    p_data[:, 1] = np.log(p_data[:, 1] + 1)
 
     # num authors
-    p_data[:, 3] = np.log(p_data[:, 3] + 1)
+    # p_data[:, 3] = np.log(p_data[:, 3] + 1)
 
     # avg comment len
-    p_data[:, 1] = np.log(p_data[:, 1] + 1)
+    # p_data[:, 1] = np.log(p_data[:, 1] + 1)
+    
+    # num subscribers
+    p_data[:, 2] = np.log(p_data[:, 2] + 1)
 
     # Standard scale our data (0 mean, 1 var)
     scaler = StandardScaler()
-    p_data[:, [1, 2, 3, 4]] = scaler.fit_transform(p_data[:, [1, 2, 3, 4]])
+    p_data[:, [1, 2]] = scaler.fit_transform(p_data[:, [1, 2]])
 
     return p_data
 

@@ -4,10 +4,8 @@ import numpy as np
 from pyro.infer import Predictive
 
 P_INDEP_DICT = {
-    1: "Avg Comment Length",
-    2: "Avg Net Upvotes (Standardized)",
-    3: "Num Authors",
-    4: "Comments in First Hour",
+    1: "Comments in First Hour",
+    2: "Subscribers"
 }
 
 LABELS = [
@@ -72,8 +70,6 @@ def plot_predictions(
     # plt.yscale("log")
     # plt.xscale("log")
     plt.legend()
-    plt.ylim(-1, 1e4)
-    plt.xlim(-1, 1e3)
     plt.show()
 
 
