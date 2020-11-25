@@ -1,12 +1,10 @@
 import arviz as az
 import matplotlib.pyplot as plt
 import numpy as np
+from data_proc import transform_data
 from pyro.infer import Predictive
 
-P_INDEP_DICT = {
-    1: "Comments in First Hour",
-    2: "Subscribers"
-}
+P_INDEP_DICT = {1: "Comments in First Hour", 2: "Subscribers"}
 
 LABELS = [
     "Factual News",
@@ -16,9 +14,38 @@ LABELS = [
 ]
 
 
+# only works for simple regression!
+def get_smooth_p_data(x_range):
+    n_per_type_obs = len(x_range)
+    num_types = 4
+
+    original_smooth_p_data = np.empty((n_per_type_obs * num_types, 2))
+
+    smooth_p_types = np.empty((n_per_type_obs * num_types))
+
+    for t in range(num_types):
+        start_idx = n_per_type_obs * t
+        end_idx = n_per_type_obs * (t + 1)
+        original_smooth_p_data[start_idx:end_idx, 0] = 1
+        original_smooth_p_data[start_idx:end_idx, 1] = x_range
+        smooth_p_types[start_idx:end_idx] = t
+
+    smooth_p_data = transform_data(original_smooth_p_data)
+
+    return original_smooth_p_data, smooth_p_data, smooth_p_types
+
+
 # only_type should be one of 0, 1, 2, or 3, corresponding to the type of post.
 def plot_predictions(
-    original_p_data, y, y_pred, p_types, indep=4, only_type=None
+    original_p_data,
+    y,
+    p_types,
+    p_data_pred,
+    y_pred,
+    p_types_pred,
+    indep=4,
+    only_type=None,
+    log_scale=True,
 ):
     plt.figure(figsize=(12, 9))
 
@@ -40,11 +67,13 @@ def plot_predictions(
 
     for i, t in enumerate(types):
         if only_type is None or t == only_type:
-            y_pred_t = y_pred[p_types == t]
-            y_t = 1 * y[p_types == t]
-            x_t = original_p_data[p_types == t, indep]
+            x_pred_t = p_data_pred[p_types_pred == t, indep]
+            y_pred_t = y_pred[p_types_pred == t]
 
-            sorted_indices = np.argsort(x_t)
+            x_t = original_p_data[p_types == t, indep]
+            y_t = y[p_types == t]
+
+            sorted_indices_pred = np.argsort(x_pred_t)
 
             type_label = LABELS[int(t)]
 
@@ -58,8 +87,8 @@ def plot_predictions(
                 label=f"Actual {type_label}",
             )
             plt.plot(
-                x_t[sorted_indices],
-                y_pred_t[sorted_indices],
+                x_pred_t[sorted_indices_pred],
+                y_pred_t[sorted_indices_pred],
                 c=color,
                 label=f"Predicted {type_label}",
             )
@@ -67,8 +96,9 @@ def plot_predictions(
     plt.xlabel(P_INDEP_DICT[indep])
     plt.ylabel("Total Comments")
 
-    # plt.yscale("log")
-    # plt.xscale("log")
+    if log_scale:
+        plt.yscale("log")
+        plt.xscale("log")
     plt.legend()
     plt.show()
 
@@ -174,4 +204,14 @@ def plot_ppc(svi_samples, y, func, label, log_stats=True):
     plt.xlabel(x_label)
     plt.ylabel("Frequency")
     plt.legend()
+    plt.show()
+
+
+# TODO plot by type.
+def plot_residuals(y, y_pred):
+    residuals = y - y_pred
+
+    plt.hist(residuals)
+    plt.yscale("log")
+    plt.title("Residuals (Obs - Pred)")
     plt.show()

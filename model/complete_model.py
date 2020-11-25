@@ -5,6 +5,34 @@ import torch
 from pyro.distributions import constraints
 
 
+def get_centered(loc, p_groups):
+
+    num_posts = len(p_groups)
+    num_groups = loc.shape[1]
+
+    # This centers w.r.t. the weighting found in the data.
+    unique, group_counts = torch.unique(p_groups, return_counts=True)
+    all_group_counts = torch.zeros((num_groups,), dtype=torch.float64)
+    all_group_counts[unique] = group_counts.double()
+
+    # loc shape: (num_p_indeps, num_groups)
+    # group counts shape: (num_groups)
+    # for each p_indep, take weighted mean according to group_counts
+
+    # matrix vector mult.
+    loc_means = (
+        torch.matmul(loc, all_group_counts).reshape((-1, 1)) / num_posts
+    )
+
+    # This centers uniformly
+    # loc_means = loc.mean(dim=-1, keepdim=True)
+
+    # enforce the mean across groups to be 0.
+    loc_centered = loc - loc_means
+
+    return loc_centered
+
+
 def complete_model(
     p_data, t_data, s_data, r_data, y, p_types, p_stories, p_subreddits
 ):
@@ -50,14 +78,7 @@ def complete_model(
                 eta, t_data[t, :].T
             )  # (num_p_indeps, num_t_indeps) x (num_t_indeps, num_types)
 
-            phi_loc_means_shape = list(phi_loc.shape)
-            phi_loc_means_shape[-1] = 1
-            phi_loc_means_shape = tuple(phi_loc_means_shape)
-
-            # enforce the mean across types to be 0.
-            phi_loc_centered = phi_loc - phi_loc.mean(dim=-1).reshape(
-                phi_loc_means_shape
-            )
+            phi_loc_centered = get_centered(phi_loc, p_types)
 
             phi = pyro.sample(
                 "phi", dist.Normal(phi_loc_centered, coef_scale_prior)
@@ -73,14 +94,7 @@ def complete_model(
                 beta, s_data[s, :].T
             )  # (num_p_indeps, num_s_indeps) x (num_s_indeps, num_stories)
 
-            theta_loc_means_shape = list(theta_loc.shape)
-            theta_loc_means_shape[-1] = 1
-            theta_loc_means_shape = tuple(theta_loc_means_shape)
-
-            # enforce the mean across types to be 0.
-            theta_loc_centered = theta_loc - theta_loc.mean(dim=-1).reshape(
-                theta_loc_means_shape
-            )
+            theta_loc_centered = get_centered(theta_loc, p_stories)
 
             theta = pyro.sample(
                 "theta", dist.Normal(theta_loc_centered, coef_scale_prior)
@@ -96,14 +110,7 @@ def complete_model(
                 tau, r_data[r, :].T
             )  # (num_p_indeps, num_r_indeps) x (num_r_indeps, num_subreddits)
 
-            rho_loc_means_shape = list(rho_loc.shape)
-            rho_loc_means_shape[-1] = 1
-            rho_loc_means_shape = tuple(rho_loc_means_shape)
-
-            # enforce the mean across types to be 0.
-            rho_loc_centered = rho_loc - rho_loc.mean(dim=-1).reshape(
-                rho_loc_means_shape
-            )
+            rho_loc_centered = get_centered(rho_loc, p_subreddits)
 
             rho = pyro.sample(
                 "rho", dist.Normal(rho_loc_centered, coef_scale_prior)
@@ -270,14 +277,7 @@ def complete_guide(
                 eta, t_data[t, :].T
             )  # (num_p_indeps, num_t_indeps) x (num_t_indeps, num_types)
 
-            phi_loc_means_shape = list(phi_loc.shape)
-            phi_loc_means_shape[-1] = 1
-            phi_loc_means_shape = tuple(phi_loc_means_shape)
-
-            # enforce the mean across types to be 0.
-            phi_loc_centered = phi_loc - phi_loc.mean(dim=-1).reshape(
-                phi_loc_means_shape
-            )
+            phi_loc_centered = get_centered(phi_loc, p_types)
 
             phi = pyro.sample("phi", dist.Normal(phi_loc_centered, phi_scale))
 
@@ -291,14 +291,7 @@ def complete_guide(
                 beta, s_data[s, :].T
             )  # (num_p_indeps, num_s_indeps) x (num_s_indeps, num_stories)
 
-            theta_loc_means_shape = list(theta_loc.shape)
-            theta_loc_means_shape[-1] = 1
-            theta_loc_means_shape = tuple(theta_loc_means_shape)
-
-            # enforce the mean across stories to be 0.
-            theta_loc_centered = theta_loc - theta_loc.mean(dim=-1).reshape(
-                theta_loc_means_shape
-            )
+            theta_loc_centered = get_centered(theta_loc, p_stories)
 
             theta = pyro.sample(
                 "theta", dist.Normal(theta_loc_centered, theta_scale)
@@ -314,14 +307,7 @@ def complete_guide(
                 tau, r_data[r, :].T
             )  # (num_p_indeps, num_r_indeps) x (num_r_indeps, num_subreddits)
 
-            rho_loc_means_shape = list(rho_loc.shape)
-            rho_loc_means_shape[-1] = 1
-            rho_loc_means_shape = tuple(rho_loc_means_shape)
-
-            # enforce the mean across stories to be 0.
-            rho_loc_centered = rho_loc - rho_loc.mean(dim=-1).reshape(
-                rho_loc_means_shape
-            )
+            rho_loc_centered = get_centered(rho_loc, p_subreddits)
 
             rho = pyro.sample("rho", dist.Normal(rho_loc_centered, rho_scale))
 
@@ -362,13 +348,17 @@ def get_y_pred(
     s = torch.Tensor(p_stories).long()
     r = torch.Tensor(p_subreddits).long()
 
+    phi_centered = get_centered(phi, t)
+    theta_centered = get_centered(theta, s)
+    rho_centered = get_centered(rho, r)
+
     indeps = torch.tensor(p_data)
 
     num_posts = p_data.shape[0]
 
-    t_coefs = torch.tensor(phi[:, t])  # (num_p_indeps,num_posts)
-    s_coefs = torch.tensor(theta[:, s])  # (num_p_indeps,num_posts)
-    r_coefs = torch.tensor(rho[:, r])  # (num_p_indeps,num_posts)
+    t_coefs = torch.tensor(phi_centered[:, t])  # (num_p_indeps,num_posts)
+    s_coefs = torch.tensor(theta_centered[:, s])  # (num_p_indeps,num_posts)
+    r_coefs = torch.tensor(rho_centered[:, r])  # (num_p_indeps,num_posts)
     shared_coefs = torch.tensor(gamma).repeat(
         (1, num_posts)
     )  # (num_p_indeps,num_posts)
@@ -385,9 +375,7 @@ def get_y_pred(
     return y_pred
 
 
-def get_type_only_y_pred(
-    p_data, t_data, s_data, r_data, p_types, p_stories, p_subreddits
-):
+def get_type_only_y_pred(p_data, t_data, s_data, r_data, p_types):
     eta_loc = pyro.param("eta_loc").detach()
     gamma = pyro.param("gamma_loc").detach()
 
@@ -395,11 +383,13 @@ def get_type_only_y_pred(
 
     t = torch.Tensor(p_types).long()
 
+    phi_centered = get_centered(phi, t)
+
     indeps = torch.tensor(p_data)
 
     num_posts = p_data.shape[0]
 
-    t_coefs = torch.tensor(phi[:, t])  # (num_p_indeps,num_posts)
+    t_coefs = torch.tensor(phi_centered[:, t])  # (num_p_indeps,num_posts)
     shared_coefs = torch.tensor(gamma).repeat(
         (1, num_posts)
     )  # (num_p_indeps,num_posts)

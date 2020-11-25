@@ -37,7 +37,7 @@ def load_raw_data():
     return comments, corrections, news
 
 
-def processData(items, comments, minutes=60):
+def processData(items, comments, comments_only=False, minutes=60):
     # story level
     sid_set = {n["r"]["uid"] for n in items}
     sids = list(sorted(sid_set))
@@ -150,8 +150,13 @@ def processData(items, comments, minutes=60):
     p_data[:, 3] = p_data[:, 3] / (p_data[:, 4] + 1)  # add 1 to avoid div by 0
 
     # select relevant indep vars
-    # bias, avg cmt length, avg net upvotes, num authors, num initial comments, subscribers
+    # bias, avg cmt length, avg net upvotes,
+    # num authors, num initial comments, subscribers
     p_data = p_data[:, (0, 6, 7)]
+
+    # if comments only, prune further:
+    if comments_only:
+        p_data = p_data[:, (0, 1)]
 
     data_tuple = (p_data, t_data, s_data, r_data, y)
     lookup_tuple = (p_types, p_stories, p_subreddits)
@@ -160,8 +165,9 @@ def processData(items, comments, minutes=60):
     return data_tuple, lookup_tuple, label_tuple
 
 
-def transform_data(original_p_data):
+def transform_data(original_p_data, comments_only=False):
     p_data = original_p_data.copy()
+    n_indeps = original_p_data.shape[1]
 
     # num initial comments
     p_data[:, 1] = np.log(p_data[:, 1] + 1)
@@ -171,13 +177,16 @@ def transform_data(original_p_data):
 
     # avg comment len
     # p_data[:, 1] = np.log(p_data[:, 1] + 1)
-    
-    # num subscribers
-    p_data[:, 2] = np.log(p_data[:, 2] + 1)
+
+    if n_indeps < 2:
+        # num subscribers
+        p_data[:, 2] = np.log(p_data[:, 2] + 1)
 
     # Standard scale our data (0 mean, 1 var)
     scaler = StandardScaler()
-    p_data[:, [1, 2]] = scaler.fit_transform(p_data[:, [1, 2]])
+    p_data[:, range(1, n_indeps)] = scaler.fit_transform(
+        p_data[:, range(1, n_indeps)]
+    )
 
     return p_data
 
