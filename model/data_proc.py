@@ -53,18 +53,21 @@ def processData(items, comments, comments_only=False, minutes=60):
 
     story_claim_titles = [""] * len(sids)
 
-    s_data = np.zeros((len(sids), len(countries) + len(authors)))
+    s_data = np.zeros((len(sids), 1 + len(countries) + len(authors)))
+    s_data[:, 0] = 1
 
     # subreddit level
     subreddit_set = {n["p"]["subreddit"] for n in items}
     subreddits = list(sorted(subreddit_set))
     subreddit_indices = {subred: i for i, subred in enumerate(subreddits)}
 
-    r_data = np.eye(len(subreddits))
+    r_data = np.concatenate(
+        [np.ones((len(subreddits), 1)), np.eye(len(subreddits))], axis=1
+    )
 
     # type level
     # This t_data is just encoding each with its own dummy (with bias terms)
-    t_data = np.eye(4)
+    t_data = np.concatenate([np.ones((4, 1)), np.eye(4)], axis=1)
 
     # post level
     p_stories = np.empty((len(items),))
@@ -95,9 +98,9 @@ def processData(items, comments, comments_only=False, minutes=60):
         p_stories[i] = sid_indices[story_id]
 
         for c in p_countries:
-            s_data[sid_indices[story_id], country_indices[c]] = 1
+            s_data[sid_indices[story_id], 1 + country_indices[c]] = 1
 
-        author_indep_index = len(countries) + author_indices[review_author]
+        author_indep_index = 1 + len(countries) + author_indices[review_author]
         s_data[sid_indices[story_id], author_indep_index] = 1
 
         story_claim_titles[sid_indices[story_id]] = claim_title

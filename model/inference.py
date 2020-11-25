@@ -15,6 +15,7 @@ def run_svi(
     subsample=False,
     num_iters=10000,
     lr=1e-2,
+    zero_inflated=False,
 ):
     p_data, y, p_types, p_stories, p_subreddits = train_data
 
@@ -38,7 +39,15 @@ def run_svi(
 
     for i in range(num_iters):
         elbo = svi.step(
-            p_data, t_data, s_data, r_data, y, p_types, p_stories, p_subreddits
+            p_data,
+            t_data,
+            s_data,
+            r_data,
+            y,
+            p_types,
+            p_stories,
+            p_subreddits,
+            zero_inflated,
         )
         losses[i] = elbo
         if i % 100 == 99:

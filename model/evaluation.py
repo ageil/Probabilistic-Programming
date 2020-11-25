@@ -24,7 +24,11 @@ def plot_predictions(
     indep=4,
     only_type=None,
     log_scale=True,
+    **scatter_kwargs,
 ):
+    if scatter_kwargs is None:
+        scatter_kwargs = {}
+
     plt.figure(figsize=(12, 9))
 
     types = np.unique(p_types)
@@ -59,10 +63,10 @@ def plot_predictions(
             plt.scatter(
                 x_t,
                 y_t,
-                alpha=0.5,
                 s=12,
                 c=color,
                 label=f"Actual {type_label}",
+                **scatter_kwargs,
             )
             plt.plot(
                 x_pred_t[sorted_indices_pred],

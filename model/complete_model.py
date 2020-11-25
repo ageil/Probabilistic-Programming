@@ -34,7 +34,15 @@ def get_means(loc, p_groups):
 
 
 def complete_model(
-    p_data, t_data, s_data, r_data, y, p_types, p_stories, p_subreddits
+    p_data,
+    t_data,
+    s_data,
+    r_data,
+    y,
+    p_types,
+    p_stories,
+    p_subreddits,
+    zero_inflated,
 ):
     coef_scale_prior = 0.1
 
@@ -102,14 +110,15 @@ def complete_model(
 
     # Gate
 
-    with pyro.plate("type2", num_types, dim=-1):
-        gate = pyro.sample(
-            "gate",
-            dist.Beta(
-                torch.ones((num_types,), dtype=torch.float64),
-                torch.ones((num_types,), dtype=torch.float64),
-            ),
-        )
+    if zero_inflated[0]:
+        with pyro.plate("type2", num_types, dim=-1):
+            gate = pyro.sample(
+                "gate",
+                dist.Beta(
+                    torch.ones((num_types,), dtype=torch.float64),
+                    torch.ones((num_types,), dtype=torch.float64),
+                ),
+            )
 
     # for each post,
     # use the correct set of coefficients to run our post-level regression
@@ -144,27 +153,31 @@ def complete_model(
             dim=0
         )  # (num_p_indeps, num_posts).sum(over indeps)
 
-        # sample
-        if y is None:
-            pyro.sample(
-                "obs",
-                dist.ZeroInflatedPoisson(
-                    rate=torch.exp(mu), gate=gate.flatten()[t]
-                ),
-                obs=y,
+        # defining response dist
+        if zero_inflated[0]:
+            response_dist = dist.ZeroInflatedPoisson(
+                rate=torch.exp(mu), gate=gate.flatten()[t]
             )
         else:
-            pyro.sample(
-                "obs",
-                dist.ZeroInflatedPoisson(
-                    rate=torch.exp(mu), gate=gate.flatten()[t]
-                ),
-                obs=y[p],
-            )
+            response_dist = dist.Poisson(rate=torch.exp(mu))
+
+        # sample
+        if y is None:
+            pyro.sample("obs", response_dist, obs=y)
+        else:
+            pyro.sample("obs", response_dist, obs=y[p])
 
 
 def complete_guide(
-    p_data, t_data, s_data, r_data, y, p_types, p_stories, p_subreddits
+    p_data,
+    t_data,
+    s_data,
+    r_data,
+    y,
+    p_types,
+    p_stories,
+    p_subreddits,
+    zero_inflated,
 ):
     coef_scale_prior = 0.1
 
@@ -242,7 +255,7 @@ def complete_guide(
                 eta, t_data[t, :].T
             )  # (num_p_indeps, num_t_indeps) x (num_t_indeps, num_types)
 
-            phi = pyro.sample("phi", dist.Normal(phi_loc, phi_scale))
+            pyro.sample("phi", dist.Normal(phi_loc, phi_scale))
 
         # story level
 
@@ -254,7 +267,7 @@ def complete_guide(
                 beta, s_data[s, :].T
             )  # (num_p_indeps, num_s_indeps) x (num_s_indeps, num_stories)
 
-            theta = pyro.sample("theta", dist.Normal(theta_loc, theta_scale))
+            pyro.sample("theta", dist.Normal(theta_loc, theta_scale))
 
         # subreddit level
 
@@ -266,24 +279,23 @@ def complete_guide(
                 tau, r_data[r, :].T
             )  # (num_p_indeps, num_r_indeps) x (num_r_indeps, num_subreddits)
 
-            rho = pyro.sample("rho", dist.Normal(rho_loc, rho_scale))
+            pyro.sample("rho", dist.Normal(rho_loc, rho_scale))
 
     # Gate
 
-    gate_alpha = pyro.param(
-        "gate_alpha",
-        2.0 * torch.ones((num_types,), dtype=torch.float64),
-        constraint=constraints.positive,
-    )
-    gate_beta = pyro.param(
-        "gate_beta",
-        2.0 * torch.ones((num_types,), dtype=torch.float64),
-        constraint=constraints.positive,
-    )
-    with pyro.plate("type2", num_types, dim=-1):
-        gate = pyro.sample("gate", dist.Beta(gate_alpha, gate_beta))
-
-    return eta, phi, beta, theta, tau, rho, gate
+    if zero_inflated[0]:
+        gate_alpha = pyro.param(
+            "gate_alpha",
+            2.0 * torch.ones((num_types,), dtype=torch.float64),
+            constraint=constraints.positive,
+        )
+        gate_beta = pyro.param(
+            "gate_beta",
+            2.0 * torch.ones((num_types,), dtype=torch.float64),
+            constraint=constraints.positive,
+        )
+        with pyro.plate("type2", num_types, dim=-1):
+            pyro.sample("gate", dist.Beta(gate_alpha, gate_beta))
 
 
 def get_y_pred(
@@ -307,11 +319,9 @@ def get_y_pred(
     s_coefs = theta[:, s]  # (num_p_indeps,num_posts)
     r_coefs = rho[:, r]  # (num_p_indeps,num_posts)
 
-    mu = (
-        torch.mul(t_coefs, indeps.T)
-        + torch.mul(s_coefs, indeps.T)
-        + torch.mul(r_coefs, indeps.T)
-    ).sum(dim=0)
+    total_coefs = t_coefs + s_coefs + r_coefs
+
+    mu = (torch.mul(total_coefs, indeps.T)).sum(dim=0)
 
     y_pred = np.exp(mu)
 
@@ -337,6 +347,19 @@ def get_type_only_y_pred(p_data, t_data, p_types, s_means, r_means):
     return y_pred
 
 
+def get_mean_y_pred(p_data, t_means, s_means, r_means):
+
+    indeps = torch.Tensor(p_data)
+
+    total_coefs = (t_means + s_means + r_means).repeat((1, p_data.shape[0]))
+
+    mu = (torch.mul(total_coefs, indeps.T)).sum(dim=0)
+
+    y_pred = np.exp(mu)
+
+    return y_pred
+
+
 def get_s_means(p_stories, s_data):
     beta_loc = pyro.param("beta_loc").detach()
     theta_loc = torch.matmul(beta_loc, s_data.T)
@@ -349,3 +372,10 @@ def get_r_means(p_subreddits, r_data):
     rho_loc = torch.matmul(tau_loc, r_data.T)
     r_means = get_means(rho_loc, p_subreddits)
     return r_means
+
+
+def get_t_means(p_types, t_data):
+    eta_loc = pyro.param("eta_loc").detach()
+    phi_loc = torch.matmul(eta_loc, t_data.T)
+    t_means = get_means(phi_loc, p_types)
+    return t_means
