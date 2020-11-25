@@ -33,6 +33,12 @@ def complete_model(
         (num_p_indeps, num_r_indeps), dtype=torch.float64
     )
 
+    # shared priors
+    gamma_loc = torch.zeros((num_p_indeps, 1), dtype=torch.float64)
+    gamma_scale = coef_scale_prior * torch.ones(
+        (num_p_indeps, 1), dtype=torch.float64
+    )
+
     with pyro.plate("p_indep", num_p_indeps, dim=-2):
 
         # Type Level
@@ -44,8 +50,18 @@ def complete_model(
                 eta, t_data[t, :].T
             )  # (num_p_indeps, num_t_indeps) x (num_t_indeps, num_types)
 
-            phi_dist = dist.Normal(phi_loc, coef_scale_prior)
-            phi = pyro.sample("phi", phi_dist)
+            phi_loc_means_shape = list(phi_loc.shape)
+            phi_loc_means_shape[-1] = 1
+            phi_loc_means_shape = tuple(phi_loc_means_shape)
+
+            # enforce the mean across types to be 0.
+            phi_loc_centered = phi_loc - phi_loc.mean(dim=-1).reshape(
+                phi_loc_means_shape
+            )
+
+            phi = pyro.sample(
+                "phi", dist.Normal(phi_loc_centered, coef_scale_prior)
+            )
 
         # Story Level
 
@@ -57,8 +73,18 @@ def complete_model(
                 beta, s_data[s, :].T
             )  # (num_p_indeps, num_s_indeps) x (num_s_indeps, num_stories)
 
-            theta_dist = dist.Normal(theta_loc, coef_scale_prior)
-            theta = pyro.sample("theta", theta_dist)
+            theta_loc_means_shape = list(theta_loc.shape)
+            theta_loc_means_shape[-1] = 1
+            theta_loc_means_shape = tuple(theta_loc_means_shape)
+
+            # enforce the mean across types to be 0.
+            theta_loc_centered = theta_loc - theta_loc.mean(dim=-1).reshape(
+                theta_loc_means_shape
+            )
+
+            theta = pyro.sample(
+                "theta", dist.Normal(theta_loc_centered, coef_scale_prior)
+            )
 
         # Subreddit Level
 
@@ -70,8 +96,22 @@ def complete_model(
                 tau, r_data[r, :].T
             )  # (num_p_indeps, num_r_indeps) x (num_r_indeps, num_subreddits)
 
-            rho_dist = dist.Normal(rho_loc, coef_scale_prior)
-            rho = pyro.sample("rho", rho_dist)
+            rho_loc_means_shape = list(rho_loc.shape)
+            rho_loc_means_shape[-1] = 1
+            rho_loc_means_shape = tuple(rho_loc_means_shape)
+
+            # enforce the mean across types to be 0.
+            rho_loc_centered = rho_loc - rho_loc.mean(dim=-1).reshape(
+                rho_loc_means_shape
+            )
+
+            rho = pyro.sample(
+                "rho", dist.Normal(rho_loc_centered, coef_scale_prior)
+            )
+
+        # Shared
+        gamma_dist = dist.Normal(gamma_loc, gamma_scale)
+        gamma = pyro.sample("gamma", gamma_dist)
 
     # Gate
 
@@ -97,6 +137,7 @@ def complete_model(
         t_coefs = phi[:, t]  # (num_p_indeps,num_posts)
         s_coefs = theta[:, s]  # (num_p_indeps,num_posts)
         r_coefs = rho[:, r]  # (num_p_indeps,num_posts)
+        shared_coefs = gamma.repeat((1, num_posts))  # (num_p_indeps,num_posts)
 
         type_level_products = torch.mul(
             t_coefs, indeps.T
@@ -107,12 +148,16 @@ def complete_model(
         subreddit_level_products = torch.mul(
             r_coefs, indeps.T
         )  # (num_p_indeps, num_posts) .* (num_p_indeps, num_posts)
+        shared_products = torch.mul(
+            shared_coefs, indeps.T
+        )  # (num_p_indeps, num_posts) .* (num_p_indeps, num_posts)
 
         # calculate the mean: desired shape (num_posts, 1)
         mu = (
             subreddit_level_products
             + type_level_products
             + story_level_products
+            + shared_products
         ).sum(
             dim=0
         )  # (num_p_indeps, num_posts).sum(over indeps)
@@ -203,6 +248,16 @@ def complete_guide(
         constraint=constraints.positive,
     )  # share among all subreddits.
 
+    gamma_loc = pyro.param(
+        "gamma_loc", torch.zeros((num_p_indeps, 1), dtype=torch.float64)
+    )  # share among all.
+
+    gamma_scale = pyro.param(
+        "gamma_scale",
+        coef_scale_prior * torch.ones((num_p_indeps, 1), dtype=torch.float64),
+        constraint=constraints.positive,
+    )  # share among all.
+
     with pyro.plate("p_indep", num_p_indeps, dim=-2):
 
         # type level
@@ -215,7 +270,16 @@ def complete_guide(
                 eta, t_data[t, :].T
             )  # (num_p_indeps, num_t_indeps) x (num_t_indeps, num_types)
 
-            phi = pyro.sample("phi", dist.Normal(phi_loc, phi_scale))
+            phi_loc_means_shape = list(phi_loc.shape)
+            phi_loc_means_shape[-1] = 1
+            phi_loc_means_shape = tuple(phi_loc_means_shape)
+
+            # enforce the mean across types to be 0.
+            phi_loc_centered = phi_loc - phi_loc.mean(dim=-1).reshape(
+                phi_loc_means_shape
+            )
+
+            phi = pyro.sample("phi", dist.Normal(phi_loc_centered, phi_scale))
 
         # story level
 
@@ -227,7 +291,18 @@ def complete_guide(
                 beta, s_data[s, :].T
             )  # (num_p_indeps, num_s_indeps) x (num_s_indeps, num_stories)
 
-            theta = pyro.sample("theta", dist.Normal(theta_loc, theta_scale))
+            theta_loc_means_shape = list(theta_loc.shape)
+            theta_loc_means_shape[-1] = 1
+            theta_loc_means_shape = tuple(theta_loc_means_shape)
+
+            # enforce the mean across stories to be 0.
+            theta_loc_centered = theta_loc - theta_loc.mean(dim=-1).reshape(
+                theta_loc_means_shape
+            )
+
+            theta = pyro.sample(
+                "theta", dist.Normal(theta_loc_centered, theta_scale)
+            )
 
         # subreddit level
 
@@ -239,7 +314,19 @@ def complete_guide(
                 tau, r_data[r, :].T
             )  # (num_p_indeps, num_r_indeps) x (num_r_indeps, num_subreddits)
 
-            rho = pyro.sample("rho", dist.Normal(rho_loc, rho_scale))
+            rho_loc_means_shape = list(rho_loc.shape)
+            rho_loc_means_shape[-1] = 1
+            rho_loc_means_shape = tuple(rho_loc_means_shape)
+
+            # enforce the mean across stories to be 0.
+            rho_loc_centered = rho_loc - rho_loc.mean(dim=-1).reshape(
+                rho_loc_means_shape
+            )
+
+            rho = pyro.sample("rho", dist.Normal(rho_loc_centered, rho_scale))
+
+        # shared
+        gamma = pyro.sample("gamma", dist.Normal(gamma_loc, gamma_scale))
 
     # Gate
 
@@ -256,7 +343,7 @@ def complete_guide(
     with pyro.plate("type2", num_types, dim=-1):
         gate = pyro.sample("gate", dist.Beta(gate_alpha, gate_beta))
 
-    return eta, phi, beta, theta, tau, rho, gate
+    return eta, phi, beta, theta, tau, rho, gate, gamma
 
 
 def get_y_pred(
@@ -265,6 +352,7 @@ def get_y_pred(
     eta_loc = pyro.param("eta_loc").detach()
     beta_loc = pyro.param("beta_loc").detach()
     tau_loc = pyro.param("tau_loc").detach()
+    gamma = pyro.param("gamma_loc").detach()
 
     phi = torch.matmul(eta_loc, t_data.T)
     theta = torch.matmul(beta_loc, s_data.T)
@@ -276,14 +364,48 @@ def get_y_pred(
 
     indeps = torch.tensor(p_data)
 
+    num_posts = p_data.shape[0]
+
     t_coefs = torch.tensor(phi[:, t])  # (num_p_indeps,num_posts)
     s_coefs = torch.tensor(theta[:, s])  # (num_p_indeps,num_posts)
     r_coefs = torch.tensor(rho[:, r])  # (num_p_indeps,num_posts)
+    shared_coefs = torch.tensor(gamma).repeat(
+        (1, num_posts)
+    )  # (num_p_indeps,num_posts)
 
     mu = (
         torch.mul(t_coefs, indeps.T)
         + torch.mul(s_coefs, indeps.T)
         + torch.mul(r_coefs, indeps.T)
+        + torch.mul(shared_coefs, indeps.T)
+    ).sum(dim=0)
+
+    y_pred = np.exp(mu)
+
+    return y_pred
+
+
+def get_type_only_y_pred(
+    p_data, t_data, s_data, r_data, p_types, p_stories, p_subreddits
+):
+    eta_loc = pyro.param("eta_loc").detach()
+    gamma = pyro.param("gamma_loc").detach()
+
+    phi = torch.matmul(eta_loc, t_data.T)
+
+    t = torch.Tensor(p_types).long()
+
+    indeps = torch.tensor(p_data)
+
+    num_posts = p_data.shape[0]
+
+    t_coefs = torch.tensor(phi[:, t])  # (num_p_indeps,num_posts)
+    shared_coefs = torch.tensor(gamma).repeat(
+        (1, num_posts)
+    )  # (num_p_indeps,num_posts)
+
+    mu = (
+        torch.mul(t_coefs, indeps.T) + torch.mul(shared_coefs, indeps.T)
     ).sum(dim=0)
 
     y_pred = np.exp(mu)

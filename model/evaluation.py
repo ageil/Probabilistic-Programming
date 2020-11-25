@@ -69,11 +69,11 @@ def plot_predictions(
     plt.xlabel(P_INDEP_DICT[indep])
     plt.ylabel("Total Comments")
 
-    plt.yscale("log")
-    plt.xscale("log")
+    # plt.yscale("log")
+    # plt.xscale("log")
     plt.legend()
-    plt.ylim(1, 1e4)
-    # plt.xlim(0,10)
+    plt.ylim(-1, 1e4)
+    plt.xlim(-1, 1e3)
     plt.show()
 
 

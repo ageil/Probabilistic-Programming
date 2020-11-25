@@ -8,7 +8,13 @@ from pyro.infer import SVI, JitTrace_ELBO
 
 
 def run_svi(
-    model, guide, train_data, unsplit_data, subsample=False, num_iters=10000
+    model,
+    guide,
+    train_data,
+    unsplit_data,
+    subsample=False,
+    num_iters=10000,
+    lr=1e-2,
 ):
     p_data, y, p_types, p_stories, p_subreddits = train_data
 
@@ -22,7 +28,7 @@ def run_svi(
         p_subreddits = p_subreddits[:250]
 
     svi = SVI(
-        model, guide, optim.ClippedAdam({"lr": 1e-2}), loss=JitTrace_ELBO()
+        model, guide, optim.ClippedAdam({"lr": lr}), loss=JitTrace_ELBO()
     )
 
     pyro.clear_param_store()
