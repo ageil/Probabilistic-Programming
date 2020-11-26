@@ -72,7 +72,7 @@ def plot_predictions(
                 c=color,
                 label=f"Predicted {type_label}",
             )
-    
+
     plt.xlabel(P_INDEP_DICT[indep])
     plt.ylabel("Total Comments")
 
@@ -81,6 +81,7 @@ def plot_predictions(
         plt.xscale("log")
     plt.legend()
     plt.show()
+
 
 def get_samples(model, guide, *args, num_samples=1000):
     predictive = Predictive(model, guide=guide, num_samples=num_samples)
@@ -162,7 +163,7 @@ def plot_pp_pdf(inf_data, y):
 
 
 # func should calculate the ppc along axis 0.
-def plot_ppc(svi_samples, y, func, label, log_stats=True):
+def plot_ppc(svi_samples, y, func, label, log_stats=True, log_freqs=False):
     y = np.array(y)
     obs_per_draw = len(y)
     stats = func(svi_samples["obs"].reshape(obs_per_draw, -1))
@@ -182,6 +183,8 @@ def plot_ppc(svi_samples, y, func, label, log_stats=True):
     plt.title(f"PPC of {label}")
     plt.xlabel(x_label)
     plt.ylabel("Frequency")
+    if log_freqs:
+        plt.yscale("log")
     plt.legend()
     plt.show()
 
