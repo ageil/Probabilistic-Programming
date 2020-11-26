@@ -197,3 +197,24 @@ def plot_residuals(y, y_pred):
     plt.yscale("log")
     plt.title("Residuals (Obs - Pred)")
     plt.show()
+
+
+def MAE(y, y_hat):
+    y = np.array(y)
+    y_hat = np.array(y_hat)
+    return np.mean(np.abs(y - y_hat))
+
+
+def MSE(y, y_hat):
+    y = np.array(y)
+    y_hat = np.array(y_hat)
+    return np.mean((y - y_hat) ** 2)
+
+
+def R2(y, y_hat):
+    y = np.array(y)
+    y_hat = np.array(y_hat)
+    SSE = np.sum((y - y_hat) ** 2)
+    TSS = np.sum((y - np.mean(y)) ** 2)
+    R2 = 1 - SSE / TSS
+    return R2
