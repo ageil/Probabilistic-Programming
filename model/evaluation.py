@@ -190,13 +190,28 @@ def plot_ppc(svi_samples, y, func, label, log_stats=True, log_freqs=False):
 
 
 # TODO plot by type.
-def plot_residuals(y, y_pred):
+def plot_residuals(y, y_pred, title="Residuals (Obs - Pred)"):
     residuals = y - y_pred
 
     plt.hist(residuals)
     plt.yscale("log")
-    plt.title("Residuals (Obs - Pred)")
+    plt.title(title)
     plt.show()
+
+
+def plot_residuals_by_type(y, y_pred, p_types):
+    y = np.array(y)
+    y_pred = np.array(y_pred)
+    for t in np.unique(p_types):
+        t = int(t)
+        y_t = y[p_types == t]
+        y_pred_t = y_pred[p_types == t]
+        plt.title()
+        plot_residuals(
+            y_t,
+            y_pred_t,
+            title=f"Residuals (Obs - Pred): {np.array(LABELS)[t]}",
+        )
 
 
 def MAE(y, y_hat):
