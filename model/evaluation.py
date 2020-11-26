@@ -2,6 +2,7 @@ import arviz as az
 import matplotlib.pyplot as plt
 import numpy as np
 from pyro.infer import Predictive
+from pyro.ops.stats import quantile
 
 P_INDEP_DICT = {1: "Comments in First Hour", 2: "Subscribers"}
 
@@ -83,14 +84,23 @@ def plot_predictions(
     plt.show()
 
 
-def get_samples(model, guide, *args, num_samples=1000):
+def get_samples(model, guide, *args, num_samples=1000, detach=True):
     predictive = Predictive(model, guide=guide, num_samples=num_samples)
-    svi_samples = {
-        k: v.reshape((1, num_samples, -1)).detach().cpu().numpy()
-        for k, v in predictive(*args).items()
-    }
+    if detach:
+        svi_samples = {
+            k: v.reshape((1, num_samples, -1)).detach().cpu().numpy()
+            for k, v in predictive(*args).items()
+        }
+    else:
+        svi_samples = {
+            k: v.reshape((1, num_samples, -1))
+            for k, v in predictive(*args).items()
+        }
     return svi_samples
 
+def get_quantiles(samples, param, quantiles=(0.1, 0.5, 0.9)):
+    qs = quantile(samples[param], quantiles)
+    return qs
 
 def gather_az_inference_data(svi_samples, y):
     inf_data = az.convert_to_inference_data(
