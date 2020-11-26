@@ -35,7 +35,7 @@ def complete_model(
         (num_p_indeps, num_s_indeps), dtype=torch.float64
     )
 
-    # type priors
+    # subreddit priors
     tau_loc = torch.zeros((num_p_indeps, num_r_indeps), dtype=torch.float64)
     tau_scale = coef_scale_prior * torch.ones(
         (num_p_indeps, num_r_indeps), dtype=torch.float64
