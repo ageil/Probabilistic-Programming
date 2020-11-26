@@ -38,6 +38,9 @@ def get_y_pred(
 
             total_coefs += group_coefs
 
+    if "gamma_loc" in global_param_names:
+        total_coefs += pyro.param("gamma_loc").detach()
+
     mu = (torch.mul(total_coefs, indeps.T)).sum(dim=0)
 
     y_pred = np.exp(mu)
