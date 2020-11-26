@@ -43,7 +43,7 @@ def get_y_pred(
 
     mu = (torch.mul(total_coefs, indeps.T)).sum(dim=0)
 
-    y_pred = np.exp(mu)
+    y_pred = np.exp(mu).int()
 
     return y_pred
 
@@ -63,7 +63,7 @@ def get_type_only_y_pred(p_data, t_data, p_types, s_means=0, r_means=0):
 
     mu = (torch.mul(total_coefs, indeps.T)).sum(dim=0)
 
-    y_pred = np.exp(mu)
+    y_pred = np.exp(mu).int()
 
     return y_pred
 
@@ -78,7 +78,7 @@ def get_mean_y_pred(p_data, t_means=0, s_means=0, r_means=0):
 
     mu = (torch.mul(total_coefs, indeps.T)).sum(dim=0)
 
-    y_pred = np.exp(mu)
+    y_pred = np.exp(mu).int()
 
     return y_pred
 
