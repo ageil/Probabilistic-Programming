@@ -7,7 +7,7 @@ def get_y_pred(
     p_data, t_data, s_data, r_data, p_types, p_stories, p_subreddits
 ):
     indeps = torch.Tensor(p_data)
-    total_coefs = np.zeros((p_data.shape[1], p_data.shape[0]))
+    total_coefs = torch.zeros((p_data.shape[1], p_data.shape[0]))
     global_param_names = [param_tup[1] for param_tup in pyro.get_param_store()]
 
     higher_level_reg_params = ["eta_loc", "beta_loc", "tau_loc"]
@@ -55,8 +55,10 @@ def get_type_only_y_pred(p_data, t_data, p_types, s_means=0, r_means=0):
 
     indeps = torch.Tensor(p_data)
 
-    t_coefs = phi[:, t]  # (num_p_indeps,num_posts)
-    total_coefs = t_coefs + s_means + r_means
+    total_coefs = phi[:, t]  # (num_p_indeps,num_posts)
+    for coef in [s_means, r_means]:
+        if coef is not None:
+            total_coefs += coef
 
     mu = (torch.mul(total_coefs, indeps.T)).sum(dim=0)
 
@@ -68,8 +70,13 @@ def get_type_only_y_pred(p_data, t_data, p_types, s_means=0, r_means=0):
 def get_mean_y_pred(p_data, t_means=0, s_means=0, r_means=0):
 
     indeps = torch.Tensor(p_data)
-
-    total_coefs = (t_means + s_means + r_means).repeat((1, p_data.shape[0]))
+    
+    
+    total_coefs = t_means
+    for coef in [s_means, r_means]:
+        if coef is not None:
+            total_coefs += coef
+    total_coefs = total_coefs.repeat((1, p_data.shape[0]))
 
     mu = (torch.mul(total_coefs, indeps.T)).sum(dim=0)
 
