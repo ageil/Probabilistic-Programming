@@ -26,8 +26,6 @@ def plot_predictions(
     log_scale=True,
     **scatter_kwargs,
 ):
-    if scatter_kwargs is None:
-        scatter_kwargs = {}
 
     plt.figure(figsize=(12, 9))
 
@@ -74,7 +72,7 @@ def plot_predictions(
                 c=color,
                 label=f"Predicted {type_label}",
             )
-
+    
     plt.xlabel(P_INDEP_DICT[indep])
     plt.ylabel("Total Comments")
 
@@ -83,7 +81,6 @@ def plot_predictions(
         plt.xscale("log")
     plt.legend()
     plt.show()
-
 
 def get_samples(model, guide, *args, num_samples=1000):
     predictive = Predictive(model, guide=guide, num_samples=num_samples)
