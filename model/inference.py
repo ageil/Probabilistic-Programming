@@ -72,10 +72,11 @@ def run_svi(
 
 
 def plot_losses(losses, log_scale=True, skip_first=0):
+    plt.figure(figsize=(10, 4))
     plt.plot(range(len(losses[skip_first:])), np.array(losses[skip_first:]))
     plt.xlabel("Iteration")
     plt.ylabel("ELBO Loss")
     if log_scale:
         plt.yscale("log")
     plt.title("Learning Curve")
-    plt.show()
+    plt.tight_layout()
