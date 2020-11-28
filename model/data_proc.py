@@ -2,7 +2,6 @@ import json
 
 import numpy as np
 import torch
-from sklearn.preprocessing import StandardScaler
 
 
 def load_comments():
@@ -58,13 +57,11 @@ def processData(items, comments, comments_only=False, minutes=60):
 
     # subreddit level
     num_bins = 25
-    counts = np.array([max(0, n['p']['subscribers']) for n in items])
-    subreddit_bins = np.quantile(counts, np.linspace(0, 1, num_bins+1))
+    counts = np.array([max(0, n["p"]["subscribers"]) for n in items])
+    subreddit_bins = np.quantile(counts, np.linspace(0, 1, num_bins + 1))
     subreddit_bins[-1] = subreddit_bins[-1] + 1
-    
-    r_data = np.concatenate(
-        [np.ones((num_bins, 1)), np.eye(num_bins)], axis=1
-    )
+
+    r_data = np.concatenate([np.ones((num_bins, 1)), np.eye(num_bins)], axis=1)
 
     # type level
     # This t_data is just encoding each with its own dummy (with bias terms)
@@ -72,7 +69,7 @@ def processData(items, comments, comments_only=False, minutes=60):
 
     # post level
     p_stories = np.empty((len(items),))
-    p_subreddits = np.digitize(counts, subreddit_bins)-1
+    p_subreddits = np.digitize(counts, subreddit_bins) - 1
     p_types = np.empty((len(items),))
     y = np.empty((len(items),))
 
@@ -87,7 +84,7 @@ def processData(items, comments, comments_only=False, minutes=60):
         # post-level
         isNews = "isFakeStory" in n["r"]["reviewRating"]
         news_id = n["p"]["id"]
-        subscribers = max(n["p"]["subscribers"], 0)
+        # subscribers = max(n["p"]["subscribers"], 0)
 
         # story-level
         story_id = n["r"]["uid"]
@@ -175,12 +172,6 @@ def transform_data(original_p_data, comments_only=False):
     if n_indeps < 2:
         # num subscribers
         p_data[:, 2] = np.log(p_data[:, 2] + 1)
-
-    # Standard scale our data (0 mean, 1 var)
-    scaler = StandardScaler()
-    p_data[:, range(1, n_indeps)] = scaler.fit_transform(
-        p_data[:, range(1, n_indeps)]
-    )
 
     return p_data
 

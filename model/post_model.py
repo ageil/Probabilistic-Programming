@@ -27,7 +27,7 @@ def post_model(
         gamma = pyro.sample("gamma", dist.Normal(gamma_loc, coef_scale_prior))
 
     # Gate
-    if zero_inflated[0]:
+    if zero_inflated.detach() > 0:
         gate = pyro.sample(
             "gate",
             dist.Beta(
@@ -43,19 +43,12 @@ def post_model(
         # indep vars for this post
         indeps = p_data[p, :]
 
-        coefs = gamma.repeat((1, num_posts))  # (num_p_indeps,num_posts)
-
-        products = torch.mul(
-            coefs, indeps.T
-        )  # (num_p_indeps, num_posts) .* (num_p_indeps, num_posts)
-
-        # calculate the mean: desired shape (num_posts, 1)
-        mu = (products).sum(
-            dim=0
-        )  # (num_p_indeps, num_posts).sum(over indeps)
+        mu = torch.matmul(
+            indeps, gamma
+        ).flatten()  # ( num_posts, num_p_indeps) x (num_p_indeps, 1)
 
         # defining response dist
-        if zero_inflated[0]:
+        if zero_inflated.detach() > 0:
             response_dist = dist.ZeroInflatedPoisson(
                 rate=torch.exp(mu), gate=gate.flatten()
             )
@@ -100,7 +93,7 @@ def post_guide(
         pyro.sample("gamma", dist.Normal(gamma_loc, gamma_scale))
 
     # Gate, shared across all posts
-    if zero_inflated[0]:
+    if zero_inflated.detach() > 0:
         gate_alpha = pyro.param(
             "gate_alpha",
             2.0 * torch.ones((1,), dtype=torch.float64),

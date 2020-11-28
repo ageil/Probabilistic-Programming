@@ -4,7 +4,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pyro
 import pyro.optim as optim
-from pyro.infer import SVI, JitTrace_ELBO
+import torch
+from pyro.infer import SVI, Trace_ELBO
 
 
 def run_svi(
@@ -17,6 +18,8 @@ def run_svi(
     lr=1e-2,
     zero_inflated=False,
 ):
+
+    zero_inflated = torch.tensor([zero_inflated], dtype=torch.float64)
     p_data, y, p_types, p_stories, p_subreddits = train_data
 
     t_data, s_data, r_data = unsplit_data
@@ -28,9 +31,7 @@ def run_svi(
         p_stories = p_stories[:250]
         p_subreddits = p_subreddits[:250]
 
-    svi = SVI(
-        model, guide, optim.ClippedAdam({"lr": lr}), loss=JitTrace_ELBO()
-    )
+    svi = SVI(model, guide, optim.ClippedAdam({"lr": lr}), loss=Trace_ELBO())
 
     pyro.clear_param_store()
     losses = np.zeros((num_iters,))

@@ -1,4 +1,3 @@
-import numpy as np
 import pyro
 import pyro.distributions as dist
 import torch
@@ -59,7 +58,7 @@ def subreddit_model(
             rho = pyro.sample("rho", dist.Normal(rho_loc, coef_scale_prior))
 
     # Gate
-    if zero_inflated[0]:
+    if zero_inflated.detach() > 0:
         with pyro.plate("type2", num_types, dim=-1):
             gate = pyro.sample(
                 "gate",
@@ -89,15 +88,12 @@ def subreddit_model(
         )  # (num_p_indeps, num_posts) .* (num_p_indeps, num_posts)
 
         # calculate the mean: desired shape (num_posts, 1)
-        mu = (
-            subreddit_level_products
-            + type_level_products
-        ).sum(
+        mu = (subreddit_level_products + type_level_products).sum(
             dim=0
         )  # (num_p_indeps, num_posts).sum(over indeps)
 
         # defining response dist
-        if zero_inflated[0]:
+        if zero_inflated.detach() > 0:
             response_dist = dist.ZeroInflatedPoisson(
                 rate=torch.exp(mu), gate=gate.flatten()[t]
             )
@@ -193,7 +189,7 @@ def subreddit_guide(
             pyro.sample("rho", dist.Normal(rho_loc, rho_scale))
 
     # Gate
-    if zero_inflated[0]:
+    if zero_inflated.detach() > 0:
         gate_alpha = pyro.param(
             "gate_alpha",
             2.0 * torch.ones((num_types,), dtype=torch.float64),
