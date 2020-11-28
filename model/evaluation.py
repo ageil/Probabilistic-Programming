@@ -23,7 +23,7 @@ def plot_predictions(
     p_data_pred,
     y_pred,
     p_types_pred,
-    indep=4,
+    indep=1,
     only_type=None,
     log_scale=True,
     **scatter_kwargs,
@@ -44,7 +44,7 @@ def plot_predictions(
             sorted_indices_pred = np.argsort(x_pred_t)
 
             type_label = LABELS[int(t)]
-            
+
             color = "tab:green" if i % 2 == 0 else "tab:red"
             style = "-" if i < 2 else "dotted"
 
@@ -72,6 +72,68 @@ def plot_predictions(
         plt.xscale("log")
     plt.legend()
     plt.show()
+
+
+def plot_predictions_by_subreddit(
+    original_p_data,
+    y,
+    p_subreddits,
+    p_data_pred,
+    y_pred,
+    p_subreddits_pred,
+    indep=1,
+    log_scale=True,
+    **scatter_kwargs,
+):
+
+    plt.figure(figsize=(12, 9))
+
+    subreddits = np.unique(p_subreddits)
+
+    rows = int(np.ceil(np.sqrt(len(subreddits))))
+    cols = int(np.ceil(len(subreddits) / rows))
+
+    x_min = 1e-1
+    x_max = max(original_p_data[:, indep])
+    y_min = 1e-1
+    y_max = max(y)
+
+    for i, r in enumerate(subreddits):
+        x_pred_r = p_data_pred[p_subreddits_pred == r, indep]
+        y_pred_r = y_pred[p_subreddits_pred == r]
+
+        x_r = original_p_data[p_subreddits == r, indep]
+        y_r = y[p_subreddits == r]
+
+        sorted_indices_pred = np.argsort(x_pred_r)
+
+        subreddit_label = f"{i+1}th 1/{len(subreddits)}-ile"
+
+        # color = "tab:green" if i % 2 == 0 else "tab:red"
+        # style = "-" if i < 2 else "dotted"
+        plt.subplot(rows, cols, i + 1)
+        plt.scatter(
+            x_r, y_r, s=12, label=f"Actual {subreddit_label}", **scatter_kwargs
+        )
+        plt.plot(
+            x_pred_r[sorted_indices_pred],
+            y_pred_r[sorted_indices_pred],
+            label=f"Predicted {subreddit_label}",
+        )
+
+        plt.xlabel(P_INDEP_DICT[indep])
+        plt.ylabel("Total Comments")
+
+        if log_scale:
+            plt.yscale("log")
+            plt.xscale("log")
+        # plt.legend()
+
+        plt.xlim(x_min, x_max)
+        plt.ylim(y_min, y_max)
+        plt.title(subreddit_label)
+    plt.suptitle("Predictions by Subreddit")
+    plt.tight_layout()
 
 
 def get_samples(model, guide, *args, num_samples=1000, detach=True):
