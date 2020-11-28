@@ -78,7 +78,7 @@ def complete_model(
             rho = pyro.sample("rho", dist.Normal(rho_loc, coef_scale_prior))
 
     # Gate
-    if zero_inflated.detach() > 0:
+    if zero_inflated:
         with pyro.plate("type2", num_types, dim=-1):
             gate = pyro.sample(
                 "gate",
@@ -122,7 +122,7 @@ def complete_model(
         )  # (num_p_indeps, num_posts).sum(over indeps)
 
         # defining response dist
-        if zero_inflated.detach() > 0:
+        if zero_inflated:
             response_dist = dist.ZeroInflatedPoisson(
                 rate=torch.exp(mu), gate=gate.flatten()[t]
             )
@@ -246,7 +246,7 @@ def complete_guide(
             pyro.sample("rho", dist.Normal(rho_loc, rho_scale))
 
     # Gate
-    if zero_inflated.detach() > 0:
+    if zero_inflated:
         gate_alpha = pyro.param(
             "gate_alpha",
             2.0 * torch.ones((num_types,), dtype=torch.float64),

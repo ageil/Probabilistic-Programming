@@ -27,7 +27,7 @@ def post_model(
         gamma = pyro.sample("gamma", dist.Normal(gamma_loc, coef_scale_prior))
 
     # Gate
-    if zero_inflated.detach() > 0:
+    if zero_inflated:
         gate = pyro.sample(
             "gate",
             dist.Beta(
@@ -48,7 +48,7 @@ def post_model(
         ).flatten()  # ( num_posts, num_p_indeps) x (num_p_indeps, 1)
 
         # defining response dist
-        if zero_inflated.detach() > 0:
+        if zero_inflated:
             response_dist = dist.ZeroInflatedPoisson(
                 rate=torch.exp(mu), gate=gate.flatten()
             )
@@ -93,7 +93,7 @@ def post_guide(
         pyro.sample("gamma", dist.Normal(gamma_loc, gamma_scale))
 
     # Gate, shared across all posts
-    if zero_inflated.detach() > 0:
+    if zero_inflated:
         gate_alpha = pyro.param(
             "gate_alpha",
             2.0 * torch.ones((1,), dtype=torch.float64),
