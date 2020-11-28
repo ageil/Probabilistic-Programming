@@ -1,6 +1,7 @@
 import arviz as az
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
 from pyro.infer import Predictive
 from pyro.ops.stats import quantile
 
@@ -98,9 +99,11 @@ def get_samples(model, guide, *args, num_samples=1000, detach=True):
         }
     return svi_samples
 
+
 def get_quantiles(samples, param, quantiles=(0.1, 0.5, 0.9)):
-    qs = quantile(samples[param], quantiles)
+    qs = quantile(torch.squeeze(samples[param], dim=0), quantiles, dim=0)
     return qs
+
 
 def gather_az_inference_data(svi_samples, y):
     inf_data = az.convert_to_inference_data(
@@ -200,13 +203,28 @@ def plot_ppc(svi_samples, y, func, label, log_stats=True, log_freqs=False):
 
 
 # TODO plot by type.
-def plot_residuals(y, y_pred):
+def plot_residuals(y, y_pred, title="Residuals (Obs - Pred)"):
     residuals = y - y_pred
 
     plt.hist(residuals)
     plt.yscale("log")
-    plt.title("Residuals (Obs - Pred)")
+    plt.title(title)
     plt.show()
+
+
+def plot_residuals_by_type(y, y_pred, p_types):
+    y = np.array(y)
+    y_pred = np.array(y_pred)
+    for t in np.unique(p_types):
+        t = int(t)
+        y_t = y[p_types == t]
+        y_pred_t = y_pred[p_types == t]
+        plt.title()
+        plot_residuals(
+            y_t,
+            y_pred_t,
+            title=f"Residuals (Obs - Pred): {np.array(LABELS)[t]}",
+        )
 
 
 def MAE(y, y_hat):
