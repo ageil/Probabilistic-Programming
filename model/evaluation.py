@@ -238,7 +238,7 @@ def plot_pp_pdf(inf_data, y):
 def plot_ppc(svi_samples, y, func, label, log_stats=True, log_freqs=False):
     y = np.array(y)
     obs_per_draw = len(y)
-    stats = func(svi_samples["obs"].reshape(obs_per_draw, -1))
+    stats = func(svi_samples["obs"].reshape(-1, obs_per_draw).T)
     obs_stat = func(y)
     mean_stat = np.mean(stats)
 
