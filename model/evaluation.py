@@ -252,6 +252,55 @@ def plot_pp_hdi(samples, p_data, y, hdi_prob=0.99):
     plt.show()
 
 
+def plot_expectations(y, p_types):
+    real_news_posts = y[p_types == 0]
+    fake_news_posts = y[p_types == 1]
+    real_news_correction = y[p_types == 2]
+    fake_news_correction = y[p_types == 3]
+    data = [
+        [real_news_posts, fake_news_posts],
+        [real_news_correction, fake_news_correction],
+    ]
+    labels = [
+        ["Real News", "Fake News"],
+        ["Correction on Real", "Correction on Fake"],
+    ]
+    colors = [["tab:green", "tab:red"], ["tab:green", "tab:red"]]
+    plt.figure(figsize=(15, 6))
+    for i, (data_list, label_list, color_list) in enumerate(
+        zip(data, labels, colors)
+    ):
+
+        plt.subplot(2, 1, i + 1)
+
+        for d, l, c in zip(data_list, label_list, color_list):
+            hist, bins = np.histogram(d + 1, bins=20)
+            logbins = np.logspace(
+                np.log10(bins[0]), np.log10(bins[-1]), len(bins)
+            )
+            plt.hist(
+                d + 1, alpha=0.25, label=l, bins=logbins, density=True, color=c
+            )
+            plt.xscale("log")
+            #         plt.xlim(0, 6000)
+            plt.ylim(1e-7, 1)
+            plt.xlim(1, 1e4)
+            plt.axvline(d.mean(), label=f"{l} (Expected)", c=c)
+            plt.text(
+                np.exp(np.log(d.mean()) + 0.06),
+                0.3,
+                f"{np.round(d.mean(), 2)}",
+            )
+
+        plt.xscale("log")
+        plt.yscale("log")
+        plt.ylabel("Probability")
+        plt.legend()
+    plt.suptitle("Type Distributions and Expected Values")
+    plt.xlabel("Log Total Comments (Engagement)")
+    plt.tight_layout()
+
+
 def MAE(y, y_hat):
     y = np.array(y)
     y_hat = np.array(y_hat)
