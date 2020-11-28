@@ -227,6 +227,31 @@ def plot_residuals_by_type(y, y_pred, p_types):
         )
 
 
+def plot_pp_hdi(samples, p_data, y, hdi_prob=0.99):
+    x_data = p_data[:, 1].detach().numpy()
+    y_data = samples["obs"].detach().numpy()[0, :, :]
+    sorted_indices = np.argsort(x_data)
+    x_sorted = x_data[sorted_indices]
+    y_sorted = y_data[:, sorted_indices]
+
+    az.plot_hdi(
+        x_sorted,
+        y_sorted,
+        color="k",
+        plot_kwargs={"ls": "--"},
+        hdi_prob=hdi_prob,
+        fill_kwargs={"label": f"{100*hdi_prob}% HDI"},
+    )
+    plt.yscale("log")
+    plt.plot(x_sorted, np.mean(y_sorted, axis=0), "C6", label="Mean Pred")
+    plt.scatter(p_data[:, 1], y, s=12, alpha=0.1, label="Observed")
+    plt.title("HDI Posterior Predictive Plot")
+    plt.xlabel("log num comments 1st hour")
+    plt.ylabel("num total comments")
+    plt.legend()
+    plt.show()
+
+
 def MAE(y, y_hat):
     y = np.array(y)
     y_hat = np.array(y_hat)
