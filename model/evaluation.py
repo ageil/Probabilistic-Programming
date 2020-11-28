@@ -46,21 +46,25 @@ def plot_predictions(
             type_label = LABELS[int(t)]
 
             color = "tab:green" if i % 2 == 0 else "tab:red"
-            style = "-" if i < 2 else "dotted"
+            line_style = "-" if i < 2 else "dotted"
+            scatter_style = "o" if i < 2 else "x"
+            face_colors = "none" if i < 2 else color
 
             plt.scatter(
                 x_t,
                 y_t,
-                s=12,
-                c=color,
-                label=f"Actual {type_label}",
+                s=16,
+                edgecolors=color,
+                facecolors=face_colors,
+                marker=scatter_style,
+                label=f"Observed {type_label}",
                 **scatter_kwargs,
             )
             plt.plot(
                 x_pred_t[sorted_indices_pred],
                 y_pred_t[sorted_indices_pred],
                 c=color,
-                ls=style,
+                ls=line_style,
                 label=f"Predicted {type_label}",
             )
 
@@ -113,7 +117,11 @@ def plot_predictions_by_subreddit(
         # style = "-" if i < 2 else "dotted"
         plt.subplot(rows, cols, i + 1)
         plt.scatter(
-            x_r, y_r, s=12, label=f"Actual {subreddit_label}", **scatter_kwargs
+            x_r,
+            y_r,
+            s=12,
+            label=f"Observed {subreddit_label}",
+            **scatter_kwargs,
         )
         plt.plot(
             x_pred_r[sorted_indices_pred],
