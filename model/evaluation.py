@@ -33,20 +33,6 @@ def plot_predictions(
 
     types = np.unique(p_types)
 
-    colors = [
-        "tab:blue",
-        "tab:orange",
-        "tab:green",
-        "tab:red",
-        "tab:purple",
-        "tab:brown",
-        "tab:pink",
-        "tab:gray",
-        "tab:olive",
-        "tab:cyan",
-    ]
-    color_choices = np.random.choice(colors, size=len(types), replace=False)
-
     for i, t in enumerate(types):
         if only_type is None or t == only_type:
             x_pred_t = p_data_pred[p_types_pred == t, indep]
@@ -58,8 +44,10 @@ def plot_predictions(
             sorted_indices_pred = np.argsort(x_pred_t)
 
             type_label = LABELS[int(t)]
+            
+            color = "tab:green" if i % 2 == 0 else "tab:red"
+            style = "-" if i < 2 else "dotted"
 
-            color = color_choices[i]
             plt.scatter(
                 x_t,
                 y_t,
@@ -72,6 +60,7 @@ def plot_predictions(
                 x_pred_t[sorted_indices_pred],
                 y_pred_t[sorted_indices_pred],
                 c=color,
+                ls=style,
                 label=f"Predicted {type_label}",
             )
 
