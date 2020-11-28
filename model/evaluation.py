@@ -1,6 +1,7 @@
 import arviz as az
 import matplotlib.pyplot as plt
 import numpy as np
+import torch
 from pyro.infer import Predictive
 from pyro.ops.stats import quantile
 
@@ -98,9 +99,11 @@ def get_samples(model, guide, *args, num_samples=1000, detach=True):
         }
     return svi_samples
 
+
 def get_quantiles(samples, param, quantiles=(0.1, 0.5, 0.9)):
-    qs = quantile(samples[param], quantiles)
+    qs = quantile(torch.squeeze(samples[param], dim=0), quantiles, dim=0)
     return qs
+
 
 def gather_az_inference_data(svi_samples, y):
     inf_data = az.convert_to_inference_data(
