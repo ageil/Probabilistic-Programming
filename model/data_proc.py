@@ -57,12 +57,13 @@ def processData(items, comments, comments_only=False, minutes=60):
     s_data[:, 0] = 1
 
     # subreddit level
-    subreddit_set = {n["p"]["subreddit"] for n in items}
-    subreddits = list(sorted(subreddit_set))
-    subreddit_indices = {subred: i for i, subred in enumerate(subreddits)}
-
+    num_bins = 25
+    counts = np.array([max(0, n['p']['subscribers']) for n in items])
+    subreddit_bins = np.quantile(counts, np.linspace(0, 1, num_bins+1))
+    subreddit_bins[-1] = subreddit_bins[-1] + 1
+    
     r_data = np.concatenate(
-        [np.ones((len(subreddits), 1)), np.eye(len(subreddits))], axis=1
+        [np.ones((num_bins, 1)), np.eye(num_bins)], axis=1
     )
 
     # type level
@@ -71,11 +72,11 @@ def processData(items, comments, comments_only=False, minutes=60):
 
     # post level
     p_stories = np.empty((len(items),))
-    p_subreddits = np.empty((len(items),))
+    p_subreddits = np.digitize(counts, subreddit_bins)-1
     p_types = np.empty((len(items),))
     y = np.empty((len(items),))
 
-    num_p_indep = 8
+    num_p_indep = 7
     p_data = np.zeros((len(items), num_p_indep))
 
     # set bias
@@ -104,10 +105,6 @@ def processData(items, comments, comments_only=False, minutes=60):
         s_data[sid_indices[story_id], author_indep_index] = 1
 
         story_claim_titles[sid_indices[story_id]] = claim_title
-
-        # subreddit-level
-        subreddit = n["p"]["subreddit"]
-        p_subreddits[i] = subreddit_indices[subreddit]
 
         num_cmts, cmts = comments[news_id]
         c_body_lens = []
@@ -141,7 +138,6 @@ def processData(items, comments, comments_only=False, minutes=60):
         p_data[i, 3] = np.mean(c_ups) if c_ups else 0.0
         p_data[i, 4] = np.std(c_ups) if c_ups else 0.0
         p_data[i, 5] = len(unique_authors) if unique_authors else 0.0
-        p_data[i, 7] = subscribers
 
     # Adjust p_data
 
@@ -149,9 +145,8 @@ def processData(items, comments, comments_only=False, minutes=60):
     p_data[:, 3] = p_data[:, 3] / (p_data[:, 4] + 1)  # add 1 to avoid div by 0
 
     # select relevant indep vars
-    # bias, avg cmt length, avg net upvotes,
-    # num authors, num initial comments, subscribers
-    p_data = p_data[:, (0, 6, 7)]
+    # bias, num initial comments
+    p_data = p_data[:, (0, 6)]
 
     # if comments only, prune further:
     if comments_only:
@@ -159,7 +154,7 @@ def processData(items, comments, comments_only=False, minutes=60):
 
     data_tuple = (p_data, t_data, s_data, r_data, y)
     lookup_tuple = (p_types, p_stories, p_subreddits)
-    label_tuple = (countries, authors, story_claim_titles, subreddits)
+    label_tuple = (countries, authors, story_claim_titles, subreddit_bins)
 
     return data_tuple, lookup_tuple, label_tuple
 
