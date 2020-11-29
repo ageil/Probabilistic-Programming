@@ -398,8 +398,6 @@ def plot_pp_hdi(
     plt.legend()
     plt.show()
 
-    return hdi_data
-
 
 def plot_expectations(y, p_types):
     real_news_posts = y[p_types == 0]
