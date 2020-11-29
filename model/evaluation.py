@@ -42,11 +42,11 @@ def plot_predictions(
 
     for i, t in enumerate(types):
         if only_type is None or t == only_type:
-            x_pred_t = p_data_pred[p_types_pred == t, indep]
-            y_pred_t = y_pred[p_types_pred == t]
+            x_pred_t = p_data_pred[p_types_pred == t, indep] + 1
+            y_pred_t = y_pred[p_types_pred == t] + 1
 
-            x_t = original_p_data[p_types == t, indep]
-            y_t = y[p_types == t]
+            x_t = original_p_data[p_types == t, indep] + 1
+            y_t = y[p_types == t] + 1
 
             sorted_indices_pred = np.argsort(x_pred_t)
 
@@ -75,12 +75,13 @@ def plot_predictions(
                 label=f"Predicted {type_label}",
             )
 
-    plt.xlabel(P_INDEP_DICT[indep])
-    plt.ylabel("Total Comments")
+    plt.xlabel(P_INDEP_DICT[indep] + " (+1)")
+    plt.ylabel("Total Comments (+1)")
 
     if log_scale:
         plt.yscale("log")
         plt.xscale("log")
+    plt.ylim(1-1e-3, torch.max(y).detach().numpy()*2)
     plt.legend()
     plt.savefig(f"../output/{filename}")
     plt.show()
@@ -455,6 +456,10 @@ def MAE(y, y_hat):
     return np.mean(np.abs(y - y_hat))
 
 
+def MAElog(y, y_hat):
+    return MAE(np.log(y[y>0]+1), np.log(y_hat[y>0]+1))
+
+
 def MSE(y, y_hat):
     y = np.array(y)
     y_hat = np.array(y_hat)
@@ -470,15 +475,15 @@ def R2(y, y_hat):
     return R2
 
 
+def R2log(y, y_hat):
+    return R2(np.log(y[y>0]+1), np.log(y_hat[y>0]+1))
+
+
 def evaluate(results, y, y_pred, partition="train", model="post"):
     if results is None:
         results = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
     results[partition][model]["R^2"] = R2(y, y_pred)
-    results[partition][model]["R^2_log"] = R2(
-        np.log(y + 1), np.log(y_pred + 1)
-    )
+    results[partition][model]["R^2 log non-zero"] = R2log(y, y_pred)
     results[partition][model]["MAE"] = MAE(y, y_pred)
-    results[partition][model]["MAE_log"] = MAE(
-        np.log(y + 1), np.log(y_pred + 1)
-    )
+    results[partition][model]["MAE log non-zero"] = MAElog(y, y_pred)
     return results
