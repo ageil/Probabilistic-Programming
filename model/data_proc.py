@@ -177,6 +177,7 @@ def transform_data(original_p_data, comments_only=False):
 
 
 def split_and_prep_data(
+    original_p_data,
     p_data,
     t_data,
     s_data,
@@ -189,6 +190,9 @@ def split_and_prep_data(
 ):
     num_obs = p_data.shape[0]
     idx = np.random.binomial(1, train_frac, size=num_obs).astype(bool)
+
+    original_p_data_train = original_p_data[idx, :]
+    original_p_data_test = original_p_data[~idx, :]
 
     p_data_train = p_data[idx, :]
     p_data_test = p_data[~idx, :]
@@ -207,6 +211,8 @@ def split_and_prep_data(
 
     # convert everything to tensors
     # data
+    original_p_data_train = torch.Tensor(original_p_data_train).double()
+    original_p_data_test = torch.Tensor(original_p_data_test).double()
     p_data_train = torch.Tensor(p_data_train).double()
     p_data_test = torch.Tensor(p_data_test).double()
     t_data = torch.Tensor(t_data).double()
@@ -225,6 +231,7 @@ def split_and_prep_data(
     p_subreddits_test = torch.Tensor(p_subreddits_test).long()
 
     train_data = (
+        original_p_data_train,
         p_data_train,
         y_train,
         p_types_train,
@@ -232,6 +239,7 @@ def split_and_prep_data(
         p_subreddits_train,
     )
     test_data = (
+        original_p_data_test,
         p_data_test,
         y_test,
         p_types_test,
