@@ -482,8 +482,8 @@ def R2log(y, y_hat):
 def evaluate(results, y, y_pred, partition="train", model="post"):
     if results is None:
         results = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
-    results[partition][model]["R^2"] = R2(y, y_pred)
-    results[partition][model]["R^2 log non-zero"] = R2log(y, y_pred)
-    results[partition][model]["MAE"] = MAE(y, y_pred)
-    results[partition][model]["MAE log non-zero"] = MAElog(y, y_pred)
+    results[partition][model]["R^2"] = np.round(R2(y, y_pred), 2)
+    results[partition][model]["R^2 log non-zero"] = np.round(R2log(y, y_pred), 2)
+    results[partition][model]["MAE"] = np.round(MAE(y, y_pred), 2)
+    results[partition][model]["MAE log non-zero"] = np.round(MAElog(y, y_pred), 2)
     return results
