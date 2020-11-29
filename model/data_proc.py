@@ -129,7 +129,7 @@ def processData(items, comments, comments_only=False, minutes=60):
         else:
             p_types[i] = 3 if n["r"]["reviewRating"]["isFakeClaim"] else 2
 
-        y[i] = num_cmts
+        y[i] = num_cmts - p_data[i, 6]
         p_data[i, 1] = np.mean(c_body_lens) if c_body_lens else 0.0
         p_data[i, 2] = np.std(c_body_lens) if c_body_lens else 0.0
         p_data[i, 3] = np.mean(c_ups) if c_ups else 0.0
