@@ -355,7 +355,7 @@ def plot_pp_hdi(
     samples, original_p_data, y, hdi_prob=0.99, log_scale=False, limit=False
 ):
     original_x_data = original_p_data[:, 1].detach().numpy()
-    y_data = samples["obs"].detach().numpy()[:, :, :]
+    y_data = samples["obs"]
     sorted_indices = np.argsort(original_x_data)
     original_x_sorted = original_x_data[sorted_indices]
     y_sorted = y_data[:, :, sorted_indices]
