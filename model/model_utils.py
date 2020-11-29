@@ -52,11 +52,9 @@ def get_type_only_y_pred(p_data, t_data, p_types, s_means=0, r_means=0):
 
     phi = torch.matmul(eta_loc, t_data.T)
 
-    t = torch.Tensor(p_types).long()
+    indeps = p_data
 
-    indeps = torch.Tensor(p_data)
-
-    total_coefs = phi[:, t]  # (num_p_indeps,num_posts)
+    total_coefs = phi[:, p_types]  # (num_p_indeps,num_posts)
     total_coefs += s_means + r_means
 
     mu = (torch.mul(total_coefs, indeps.T)).sum(dim=0)
@@ -69,7 +67,7 @@ def get_type_only_y_pred(p_data, t_data, p_types, s_means=0, r_means=0):
 # Note: use 0s for any means that are not relevant to the model.
 def get_mean_y_pred(p_data, t_means=0, s_means=0, r_means=0):
 
-    indeps = torch.Tensor(p_data)
+    indeps = p_data
 
     total_coefs = torch.zeros((p_data.shape[1], p_data.shape[0]))
     total_coefs += t_means + s_means + r_means
