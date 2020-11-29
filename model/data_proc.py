@@ -56,7 +56,7 @@ def processData(items, comments, comments_only=False, minutes=60):
     s_data[:, 0] = 1
 
     # subreddit level
-    num_bins = 25
+    num_bins = 9
     counts = np.array([max(0, n["p"]["subscribers"]) for n in items])
     subreddit_bins = np.quantile(counts, np.linspace(0, 1, num_bins + 1))
     subreddit_bins[-1] = subreddit_bins[-1] + 1

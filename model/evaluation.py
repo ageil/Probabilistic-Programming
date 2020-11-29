@@ -81,7 +81,7 @@ def plot_predictions(
     if log_scale:
         plt.yscale("log")
         plt.xscale("log")
-    plt.ylim(1-1e-3, torch.max(y).detach().numpy()*2)
+    plt.ylim(1 - 1e-3, torch.max(y).detach().numpy() * 2)
     plt.legend()
     plt.savefig(f"../output/{filename}")
     plt.show()
@@ -353,7 +353,7 @@ def plot_residuals_by_type(y, y_pred, p_types):
 
 
 def plot_pp_hdi(
-    samples, original_p_data, y, hdi_prob=0.99, log_scale=False, limit=False
+    samples, original_p_data, y, hdi_prob=0.99, log_scale=True, limit=False
 ):
     original_x_data = original_p_data[:, 1].detach().numpy()
     y_data = samples["obs"]
@@ -457,7 +457,7 @@ def MAE(y, y_hat):
 
 
 def MAElog(y, y_hat):
-    return MAE(np.log(y[y>0]+1), np.log(y_hat[y>0]+1))
+    return MAE(np.log(y[y > 0] + 1), np.log(y_hat[y > 0] + 1))
 
 
 def MSE(y, y_hat):
@@ -476,14 +476,18 @@ def R2(y, y_hat):
 
 
 def R2log(y, y_hat):
-    return R2(np.log(y[y>0]+1), np.log(y_hat[y>0]+1))
+    return R2(np.log(y[y > 0] + 1), np.log(y_hat[y > 0] + 1))
 
 
 def evaluate(results, y, y_pred, partition="train", model="post"):
     if results is None:
         results = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
     results[partition][model]["R^2"] = np.round(R2(y, y_pred), 2)
-    results[partition][model]["R^2 log non-zero"] = np.round(R2log(y, y_pred), 2)
+    results[partition][model]["R^2 log non-zero"] = np.round(
+        R2log(y, y_pred), 2
+    )
     results[partition][model]["MAE"] = np.round(MAE(y, y_pred), 2)
-    results[partition][model]["MAE log non-zero"] = np.round(MAElog(y, y_pred), 2)
+    results[partition][model]["MAE log non-zero"] = np.round(
+        MAElog(y, y_pred), 2
+    )
     return results
