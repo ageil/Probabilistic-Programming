@@ -6,7 +6,7 @@ import torch
 def get_y_pred(
     p_data, t_data, s_data, r_data, p_types, p_stories, p_subreddits
 ):
-    indeps = torch.Tensor(p_data)
+    indeps = p_data
     total_coefs = torch.zeros((p_data.shape[1], p_data.shape[0]))
     global_param_names = [param_tup for param_tup in pyro.get_param_store()]
 
@@ -32,9 +32,7 @@ def get_y_pred(
 
             coef_matrix = torch.matmul(higher_level_reg_param, group_data.T)
 
-            g = torch.Tensor(p_groups).long()
-
-            group_coefs = coef_matrix[:, g]  # (num_p_indeps,num_posts)
+            group_coefs = coef_matrix[:, p_groups]  # (num_p_indeps,num_posts)
 
             total_coefs += group_coefs
 

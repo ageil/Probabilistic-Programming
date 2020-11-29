@@ -21,7 +21,7 @@ def run_svi(
     pyro.clear_param_store()
 
     zero_inflated = torch.tensor([zero_inflated], dtype=torch.float64)
-    p_data, y, p_types, p_stories, p_subreddits = train_data
+    _, p_data, y, p_types, p_stories, p_subreddits = train_data
 
     t_data, s_data, r_data = unsplit_data
 
