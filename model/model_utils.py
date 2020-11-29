@@ -88,27 +88,14 @@ def get_mean_y_pred(p_data, t_means=0, s_means=0, r_means=0):
 # returns a (num_p_indeps, 1) tensor of means w.r.t the groups.
 def get_means(loc, p_groups):
 
-    num_posts = len(p_groups)
-    num_groups = loc.shape[1]
-
-    # This centers w.r.t. the weighting found in the data.
-    unique, group_counts = torch.unique(p_groups, return_counts=True)
-    all_group_counts = torch.zeros((num_groups,), dtype=torch.float64)
-    all_group_counts[unique] = group_counts.double()
-
     # loc shape: (num_p_indeps, num_groups)
-    # group counts shape: (num_groups)
-    # for each p_indep, take weighted mean according to group_counts
+    # p_groups shape: (num_posts)
 
-    # matrix vector mult.
-    loc_means = (
-        torch.matmul(loc, all_group_counts).reshape((-1, 1)) / num_posts
-    )
+    # first, select the relevant coefs for each post
+    g_coefs = loc[:, p_groups]  # (num_p_indeps, num_posts)
 
-    # This centers uniformly
-    # loc_means = loc.mean(dim=-1, keepdim=True)
-
-    # enforce the mean across groups to be 0.
+    # now, take mean across all posts of the group-varying coeficients
+    loc_means = g_coefs.mean(dim=1, keepdim=True)
 
     return loc_means
 
@@ -132,3 +119,19 @@ def get_t_means(p_types, t_data):
     phi_loc = torch.matmul(eta_loc, t_data.T)
     t_means = get_means(phi_loc, p_types)
     return t_means
+
+
+def get_centered_phi(p_types, t_data):
+    t_means = get_t_means(p_types, t_data)
+    eta_loc = pyro.param("eta_loc").detach()
+    phi_loc = torch.matmul(eta_loc, t_data.T)
+    centered_phi = phi_loc - t_means
+    return centered_phi
+
+
+def get_centered_rho(p_subreddits, r_data):
+    r_means = get_r_means(p_subreddits, r_data)
+    tau_loc = pyro.param("tau_loc").detach()
+    rho_loc = torch.matmul(tau_loc, r_data.T)
+    centered_rho = rho_loc - r_means
+    return centered_rho
