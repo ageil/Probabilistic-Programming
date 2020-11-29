@@ -363,13 +363,19 @@ def plot_pp_hdi(
     hdi_data = az.hdi(y_sorted, hdi_prob=hdi_prob)
 
     x_unique = np.unique(original_x_sorted)
+
+    # take the largest bounds across all observations for this x.
     y_bounds = np.empty((x_unique.shape[0], 2))
+
+    # mean across all observations for corresponding x.
+    y_means = np.empty((x_unique.shape[0]))
 
     for i, x in enumerate(x_unique):
         y_bounds[i, 1] = np.max(hdi_data[original_x_sorted == x, 1])
         y_bounds[i, 0] = np.min(hdi_data[original_x_sorted == x, 0])
-
-    # take the worst case across all observations for this x
+        y_means[i] = np.mean(
+            y_sorted[0, :, original_x_sorted == x], axis=(0, 1)
+        )
 
     plt.fill_between(
         x_unique,
@@ -382,12 +388,7 @@ def plot_pp_hdi(
     if log_scale:
         plt.xscale("log")
         plt.yscale("log")
-    plt.plot(
-        original_x_sorted,
-        np.mean(y_sorted[0, :, :], axis=0),
-        "C6",
-        label="Mean Pred",
-    )
+    plt.plot(x_unique, y_means, "C6", label="Mean Pred")
     if limit:
         plt.xlim(-1, 10)
         plt.ylim(-1, 50)
