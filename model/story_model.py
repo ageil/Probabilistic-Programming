@@ -297,7 +297,7 @@ def story_guide(
             if zero_inflated:
                 theta_gate_loc = torch.matmul(
                     beta_gate, s_data[s, :].T
-                )  # (num_p_indeps, num_t_indeps) x (num_t_indeps, num_types)
+                )  # (num_p_indeps, num_s_indeps) x (num_s_indeps, num_stories)
 
                 pyro.sample(
                     "theta_gate", dist.Normal(theta_gate_loc, theta_gate_scale)
