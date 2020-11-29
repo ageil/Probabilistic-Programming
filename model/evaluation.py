@@ -264,7 +264,6 @@ def plot_ppc(svi_samples, y, func, label, title=None, log_stats=True, log_freqs=
         plt.show()
 
 def plot_ppc_grid(samples, y):
-    y = np.array(y)
     zero_func = lambda x: (x==0).mean(axis=0)
     max_func = lambda x: np.max(x, axis=0)
     var_func = lambda x: np.var(x, axis=0)
@@ -277,7 +276,8 @@ def plot_ppc_grid(samples, y):
     plt.figure(figsize=(12,8))
     for i, (func, title, label) in enumerate(zip(funcs, titles, labels)):
         plt.subplot(2, 2, i + 1)
-        plot_ppc(samples, y, func, label=label, title=title, legend=False, show=False, log_stats=True)
+        log_stats = (i == 1) or (i == 3)
+        plot_ppc(samples, y, func, label=label, title=title, legend=False, show=False, log_stats=log_stats)
     plt.tight_layout()
     
 # TODO plot by type.
