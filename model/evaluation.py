@@ -312,6 +312,10 @@ def plot_ppc_grid(samples, y):
             show=False,
             log_stats=log_stats,
         )
+    plt.legend(
+        bbox_to_anchor=(1.05, 1.05), loc="lower left", borderaxespad=0.0
+    )
+    #    plt.legend(loc='lower center', bbox_to_anchor = (0,-0.1,1,1))
     plt.tight_layout()
 
 
@@ -439,9 +443,7 @@ def R2(y, y_hat):
     return R2
 
 
-def evaluate(
-    results, y, y_pred, partition="train", model="post", print_out=False
-):
+def evaluate(results, y, y_pred, partition="train", model="post"):
     if results is None:
         results = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
     results[partition][model]["R^2"] = R2(y, y_pred)
@@ -452,9 +454,4 @@ def evaluate(
     results[partition][model]["MAE_log"] = MAE(
         np.log(y + 1), np.log(y_pred + 1)
     )
-    if print_out:
-        print("R^2:\t\t", results[partition][model]["R^2"])
-        print("R^2 (log):\t", results[partition][model]["R^2_log"])
-        print("MAE:\t\t", results[partition][model]["MAE"])
-        print("MAE (log):\t", results[partition][model]["MAE_log"])
     return results
