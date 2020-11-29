@@ -26,6 +26,7 @@ def plot_predictions(
     indep=1,
     only_type=None,
     log_scale=True,
+    filename="predictions.png",
     **scatter_kwargs,
 ):
 
@@ -75,6 +76,7 @@ def plot_predictions(
         plt.yscale("log")
         plt.xscale("log")
     plt.legend()
+    plt.savefig(f"../output/{filename}")
     plt.show()
 
 
@@ -235,7 +237,17 @@ def plot_pp_pdf(inf_data, y):
 
 
 # func should calculate the ppc along axis 0.
-def plot_ppc(svi_samples, y, func, label, title=None, log_stats=True, log_freqs=False, legend=True, show=True):
+def plot_ppc(
+    svi_samples,
+    y,
+    func,
+    label,
+    title=None,
+    log_stats=True,
+    log_freqs=False,
+    legend=True,
+    show=True,
+):
     y = np.array(y)
     obs_per_draw = len(y)
     stats = func(svi_samples["obs"].reshape(-1, obs_per_draw).T)
@@ -263,23 +275,46 @@ def plot_ppc(svi_samples, y, func, label, title=None, log_stats=True, log_freqs=
     if show:
         plt.show()
 
+
 def plot_ppc_grid(samples, y):
-    zero_func = lambda x: (x==0).mean(axis=0)
-    max_func = lambda x: np.max(x, axis=0)
-    var_func = lambda x: np.var(x, axis=0)
-    mean_func = lambda x: np.mean(np.log(x+1), axis=0)
-    
+    def zero_func(x):
+        return (x == 0).mean(axis=0)
+
+    def max_func(x):
+        return np.max(x, axis=0)
+
+    def var_func(x):
+        return np.var(x, axis=0)
+
+    def mean_func(x):
+        return np.mean(np.log(x + 1), axis=0)
+
     funcs = [zero_func, max_func, mean_func, var_func]
-    titles = ["Predicted zeros (%)", "Predicted max", "Predicted variance", "Predicted non-zero mean"]
+    titles = [
+        "Predicted zeros (%)",
+        "Predicted max",
+        "Predicted variance",
+        "Predicted non-zero mean",
+    ]
     labels = ["fraction zeros", "max", "variance", "non-zero mean"]
-    
-    plt.figure(figsize=(12,8))
+
+    plt.figure(figsize=(12, 8))
     for i, (func, title, label) in enumerate(zip(funcs, titles, labels)):
         plt.subplot(2, 2, i + 1)
         log_stats = (i == 1) or (i == 3)
-        plot_ppc(samples, y, func, label=label, title=title, legend=False, show=False, log_stats=log_stats)
+        plot_ppc(
+            samples,
+            y,
+            func,
+            label=label,
+            title=title,
+            legend=False,
+            show=False,
+            log_stats=log_stats,
+        )
     plt.tight_layout()
-    
+
+
 # TODO plot by type.
 def plot_residuals(y, y_pred, title="Residuals (Obs - Pred)"):
     residuals = y - y_pred
