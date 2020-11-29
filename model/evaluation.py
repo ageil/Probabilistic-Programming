@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from pyro.infer import Predictive
 from pyro.ops.stats import quantile
+from collections import defaultdict
 
 P_INDEP_DICT = {1: "Comments in First Hour", 2: "Subscribers"}
 
@@ -340,7 +341,7 @@ def plot_residuals_by_type(y, y_pred, p_types):
 
 def plot_pp_hdi(samples, p_data, y, hdi_prob=0.99):
     x_data = p_data[:, 1].detach().numpy()
-    y_data = samples["obs"].detach().numpy()[0, :, :]
+    y_data = samples["obs"][0, :, :]
     sorted_indices = np.argsort(x_data)
     x_sorted = x_data[sorted_indices]
     y_sorted = y_data[:, sorted_indices]
@@ -433,17 +434,11 @@ def R2(y, y_hat):
     return R2
 
 
-def evaluate(results, y, y_pred, partition='train', model='post', print_out=False):
+def evaluate(results, y, y_pred, partition='train', model='post'):
     if results is None:
         results = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
     results[partition][model]['R^2'] = R2(y, y_pred)
     results[partition][model]['R^2_log'] = R2(np.log(y+1), np.log(y_pred+1))
     results[partition][model]['MAE'] = MAE(y, y_pred)
     results[partition][model]['MAE_log'] = MAE(np.log(y+1), np.log(y_pred+1))
-    if print_out:
-        print("R^2:\t\t", results[partition][model]['R^2'])
-        print("R^2 (log):\t", results[partition][model]['R^2_log'])
-        print("MAE:\t\t", results[partition][model]['MAE'])
-        print("MAE (log):\t", results[partition][model]['MAE_log'])
     return results
-
