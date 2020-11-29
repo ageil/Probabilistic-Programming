@@ -321,7 +321,7 @@ def complete_guide(
             coef_scale_prior
             * torch.ones((num_p_indeps, 1), dtype=torch.float64),
             constraint=constraints.positive,
-        )  # share among all types.
+        )  # share among all stories.
 
         # subreddit level:
         tau_gate_loc = pyro.param(
@@ -340,7 +340,7 @@ def complete_guide(
             coef_scale_prior
             * torch.ones((num_p_indeps, 1), dtype=torch.float64),
             constraint=constraints.positive,
-        )  # share among all types.
+        )  # share among all subreddits.
 
     with pyro.plate("p_indep", num_p_indeps, dim=-2):
 
