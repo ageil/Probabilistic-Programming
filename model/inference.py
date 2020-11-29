@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pyro
 import pyro.optim as optim
-import torch
 from pyro.infer import SVI, Trace_ELBO
 
 
@@ -20,7 +19,6 @@ def run_svi(
 ):
     pyro.clear_param_store()
 
-    zero_inflated = torch.tensor([zero_inflated], dtype=torch.float64)
     _, p_data, y, p_types, p_stories, p_subreddits = train_data
 
     t_data, s_data, r_data = unsplit_data
