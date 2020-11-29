@@ -4,7 +4,13 @@ import torch
 
 
 def get_y_pred(
-    p_data, t_data, s_data, r_data, p_types, p_stories, p_subreddits
+    p_data,
+    t_data=None,
+    s_data=None,
+    r_data=None,
+    p_types=None,
+    p_stories=None,
+    p_subreddits=None,
 ):
     indeps = p_data
     total_coefs = torch.zeros((p_data.shape[1], p_data.shape[0]))
