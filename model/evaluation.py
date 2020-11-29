@@ -235,7 +235,7 @@ def plot_pp_pdf(inf_data, y):
 
 
 # func should calculate the ppc along axis 0.
-def plot_ppc(svi_samples, y, func, label, log_stats=True, log_freqs=False):
+def plot_ppc(svi_samples, y, func, label, title=None, log_stats=True, log_freqs=False, legend=True, show=True):
     y = np.array(y)
     obs_per_draw = len(y)
     stats = func(svi_samples["obs"].reshape(-1, obs_per_draw).T)
@@ -248,19 +248,38 @@ def plot_ppc(svi_samples, y, func, label, log_stats=True, log_freqs=False):
         mean_stat = np.log(mean_stat)
 
     x_label = f"log({label})" if log_stats else label
+    title = label if title is None else title
 
     plt.hist(stats, alpha=0.5, label="Hallucinated")
     plt.axvline(obs_stat, color="tab:red", label="Observed")
     plt.axvline(mean_stat, color="tab:green", label="Mean Hallucinated")
-    plt.title(f"PPC of {label}")
+    plt.title(f"{title}")
     plt.xlabel(x_label)
     plt.ylabel("Frequency")
     if log_freqs:
         plt.yscale("log")
-    plt.legend()
-    plt.show()
+    if legend:
+        plt.legend()
+    if show:
+        plt.show()
 
-
+def plot_ppc_grid(samples, y):
+    y = np.array(y)
+    zero_func = lambda x: (x==0).mean(axis=0)
+    max_func = lambda x: np.max(x, axis=0)
+    var_func = lambda x: np.var(x, axis=0)
+    mean_func = lambda x: np.mean(np.log(x+1), axis=0)
+    
+    funcs = [zero_func, max_func, mean_func, var_func]
+    titles = ["Predicted zeros (%)", "Predicted max", "Predicted variance", "Predicted non-zero mean"]
+    labels = ["fraction zeros", "max", "variance", "non-zero mean"]
+    
+    plt.figure(figsize=(12,8))
+    for i, (func, title, label) in enumerate(zip(funcs, titles, labels)):
+        plt.subplot(2, 2, i + 1)
+        plot_ppc(samples, y, func, label=label, title=title, legend=False, show=False, log_stats=True)
+    plt.tight_layout()
+    
 # TODO plot by type.
 def plot_residuals(y, y_pred, title="Residuals (Obs - Pred)"):
     residuals = y - y_pred
