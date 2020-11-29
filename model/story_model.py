@@ -20,7 +20,6 @@ def story_model(
     num_posts, num_p_indeps = p_data.shape
     num_types, num_t_indeps = t_data.shape
     num_stories, num_s_indeps = s_data.shape
-    num_subreddits, num_r_indeps = r_data.shape
 
     # type priors
     alpha_loc = torch.zeros((num_p_indeps, num_t_indeps), dtype=torch.float64)
@@ -34,11 +33,32 @@ def story_model(
         (num_p_indeps, num_s_indeps), dtype=torch.float64
     )
 
+    if zero_inflated:
+        # type priors
+        eta_gate_loc = torch.zeros(
+            (num_p_indeps, num_t_indeps), dtype=torch.float64
+        )
+        eta_gate_scale = coef_scale_prior * torch.ones(
+            (num_p_indeps, num_t_indeps), dtype=torch.float64
+        )
+
+        # story priors
+        beta_gate_loc = torch.zeros(
+            (num_p_indeps, num_s_indeps), dtype=torch.float64
+        )
+        beta_gate_scale = coef_scale_prior * torch.ones(
+            (num_p_indeps, num_s_indeps), dtype=torch.float64
+        )
+
     with pyro.plate("p_indep", num_p_indeps, dim=-2):
 
         # Type Level
         with pyro.plate("t_indep", num_t_indeps, dim=-1):
             eta = pyro.sample("eta", dist.Normal(alpha_loc, alpha_scale))
+            if zero_inflated:
+                eta_gate = pyro.sample(
+                    "eta_gate", dist.Normal(eta_gate_loc, eta_gate_scale)
+                )
 
         with pyro.plate("type", num_types, dim=-1) as t:
             phi_loc = torch.matmul(
@@ -47,9 +67,22 @@ def story_model(
 
             phi = pyro.sample("phi", dist.Normal(phi_loc, coef_scale_prior))
 
+            if zero_inflated:
+                phi_gate_loc = torch.matmul(
+                    eta_gate, t_data[t, :].T
+                )  # (num_p_indeps, num_t_indeps) x (num_t_indeps, num_types)
+
+                phi_gate = pyro.sample(
+                    "phi_gate", dist.Normal(phi_gate_loc, coef_scale_prior)
+                )
+
         # Story Level
         with pyro.plate("s_indep", num_s_indeps, dim=-1):
             beta = pyro.sample("beta", dist.Normal(beta_loc, beta_scale))
+            if zero_inflated:
+                beta_gate = pyro.sample(
+                    "beta_gate", dist.Normal(beta_gate_loc, beta_gate_scale)
+                )
 
         with pyro.plate("story", num_stories, dim=-1) as s:
             theta_loc = torch.matmul(
@@ -60,16 +93,14 @@ def story_model(
                 "theta", dist.Normal(theta_loc, coef_scale_prior)
             )
 
-    # Gate
-    if zero_inflated:
-        with pyro.plate("type2", num_types, dim=-1):
-            gate = pyro.sample(
-                "gate",
-                dist.Beta(
-                    torch.ones((num_types,), dtype=torch.float64),
-                    torch.ones((num_types,), dtype=torch.float64),
-                ),
-            )
+            if zero_inflated:
+                theta_gate_loc = torch.matmul(
+                    beta_gate, s_data[s, :].T
+                )  # (num_p_indeps, num_t_indeps) x (num_t_indeps, num_types)
+
+                theta_gate = pyro.sample(
+                    "theta_gate", dist.Normal(theta_gate_loc, coef_scale_prior)
+                )
 
     # for each post,
     # use the correct set of coefficients to run our post-level regression
@@ -97,8 +128,25 @@ def story_model(
 
         # defining response dist
         if zero_inflated:
+            t_coefs_gate = phi_gate[:, t]  # (num_p_indeps,num_posts)
+            s_coefs_gate = theta_gate[:, s]  # (num_p_indeps,num_posts)
+
+            type_level_products_gate = torch.mul(
+                t_coefs_gate, indeps.T
+            )  # (num_p_indeps, num_posts) .* (num_p_indeps, num_posts)
+            story_level_products_gate = torch.mul(
+                s_coefs_gate, indeps.T
+            )  # (num_p_indeps, num_posts) .* (num_p_indeps, num_posts)
+
+            # calculate the mean: desired shape (num_posts, 1)
+            gate = torch.nn.Sigmoid()(
+                (type_level_products_gate + story_level_products_gate).sum(
+                    dim=0
+                )
+            )  # (num_p_indeps, num_posts).sum(over indeps)
+
             response_dist = dist.ZeroInflatedPoisson(
-                rate=torch.exp(mu), gate=gate.flatten()[t]
+                rate=torch.exp(mu), gate=gate
             )
         else:
             response_dist = dist.Poisson(rate=torch.exp(mu))
@@ -166,11 +214,54 @@ def story_guide(
         constraint=constraints.positive,
     )  # share among all stories.
 
+    if zero_inflated:
+        # type level:
+        eta_gate_loc = pyro.param(
+            "eta_gate_loc",
+            torch.zeros((num_p_indeps, num_t_indeps), dtype=torch.float64),
+        )
+        eta_gate_scale = pyro.param(
+            "eta_gate_scale",
+            coef_scale_prior
+            * torch.ones((num_p_indeps, num_t_indeps), dtype=torch.float64),
+            constraint=constraints.positive,
+        )
+
+        phi_gate_scale = pyro.param(
+            "phi_gate_scale",
+            coef_scale_prior
+            * torch.ones((num_p_indeps, 1), dtype=torch.float64),
+            constraint=constraints.positive,
+        )  # share among all types.
+
+        # story level:
+        beta_gate_loc = pyro.param(
+            "beta_gate_loc",
+            torch.zeros((num_p_indeps, num_s_indeps), dtype=torch.float64),
+        )
+        beta_gate_scale = pyro.param(
+            "beta_gate_scale",
+            coef_scale_prior
+            * torch.ones((num_p_indeps, num_s_indeps), dtype=torch.float64),
+            constraint=constraints.positive,
+        )
+
+        theta_gate_scale = pyro.param(
+            "theta_gate_scale",
+            coef_scale_prior
+            * torch.ones((num_p_indeps, 1), dtype=torch.float64),
+            constraint=constraints.positive,
+        )  # share among all types.
+
     with pyro.plate("p_indep", num_p_indeps, dim=-2):
 
         # type level
         with pyro.plate("t_indep", num_t_indeps, dim=-1):
             eta = pyro.sample("eta", dist.Normal(eta_loc, eta_scale))
+            if zero_inflated:
+                eta_gate = pyro.sample(
+                    "eta_gate", dist.Normal(eta_gate_loc, eta_gate_scale)
+                )
 
         with pyro.plate("type", num_types, dim=-1) as t:
             phi_loc = torch.matmul(
@@ -179,9 +270,22 @@ def story_guide(
 
             pyro.sample("phi", dist.Normal(phi_loc, phi_scale))
 
+            if zero_inflated:
+                phi_gate_loc = torch.matmul(
+                    eta_gate, t_data[t, :].T
+                )  # (num_p_indeps, num_t_indeps) x (num_t_indeps, num_types)
+
+                pyro.sample(
+                    "phi_gate", dist.Normal(phi_gate_loc, phi_gate_scale)
+                )
+
         # story level
         with pyro.plate("s_indep", num_s_indeps, dim=-1):
             beta = pyro.sample("beta", dist.Normal(beta_loc, beta_scale))
+            if zero_inflated:
+                beta_gate = pyro.sample(
+                    "beta_gate", dist.Normal(beta_gate_loc, beta_gate_scale)
+                )
 
         with pyro.plate("story", num_stories, dim=-1) as s:
             theta_loc = torch.matmul(
@@ -190,17 +294,11 @@ def story_guide(
 
             pyro.sample("theta", dist.Normal(theta_loc, theta_scale))
 
-    # Gate
-    if zero_inflated:
-        gate_alpha = pyro.param(
-            "gate_alpha",
-            2.0 * torch.ones((num_types,), dtype=torch.float64),
-            constraint=constraints.positive,
-        )
-        gate_beta = pyro.param(
-            "gate_beta",
-            2.0 * torch.ones((num_types,), dtype=torch.float64),
-            constraint=constraints.positive,
-        )
-        with pyro.plate("type2", num_types, dim=-1):
-            pyro.sample("gate", dist.Beta(gate_alpha, gate_beta))
+            if zero_inflated:
+                theta_gate_loc = torch.matmul(
+                    beta_gate, s_data[s, :].T
+                )  # (num_p_indeps, num_t_indeps) x (num_t_indeps, num_types)
+
+                pyro.sample(
+                    "theta_gate", dist.Normal(theta_gate_loc, theta_gate_scale)
+                )
