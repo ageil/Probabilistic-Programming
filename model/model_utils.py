@@ -14,6 +14,7 @@ def get_y_pred(
 ):
     indeps = p_data
     total_coefs = torch.zeros((p_data.shape[1], p_data.shape[0]))
+    total_gate_coefs = torch.zeros((p_data.shape[1], p_data.shape[0]))
     global_param_names = [param_tup for param_tup in pyro.get_param_store()]
 
     higher_level_reg_params = ["eta_loc", "beta_loc", "tau_loc"]
@@ -47,7 +48,51 @@ def get_y_pred(
 
     mu = (torch.mul(total_coefs, indeps.T)).sum(dim=0)
 
-    y_pred = np.exp(mu).int()
+    higher_level_gate_reg_params = [
+        "eta_gate_loc",
+        "beta_gate_loc",
+        "tau_gate_loc",
+    ]
+
+    # init to false, change to true if find gate param
+    zero_inflated = False
+
+    # add the coefficients coming from all groups together
+    # (which params exist will differ depending on which model)
+    for higher_level_reg_param_name in higher_level_gate_reg_params:
+        if higher_level_reg_param_name in global_param_names:
+            zero_inflated = True
+            if higher_level_reg_param_name == "eta_gate_loc":
+                group_data = t_data
+                p_groups = p_types
+            elif higher_level_reg_param_name == "beta_gate_loc":
+                group_data = s_data
+                p_groups = p_stories
+            elif higher_level_reg_param_name == "tau_gate_loc":
+                group_data = r_data
+                p_groups = p_subreddits
+
+            higher_level_reg_param = pyro.param(
+                higher_level_reg_param_name
+            ).detach()
+
+            coef_matrix = torch.matmul(higher_level_reg_param, group_data.T)
+
+            group_coefs = coef_matrix[:, p_groups]  # (num_p_indeps,num_posts)
+
+            total_gate_coefs += group_coefs
+
+    if "gamma_gate_loc" in global_param_names:
+        zero_inflated = True
+        total_gate_coefs += pyro.param("gamma_gate_loc").detach()
+
+    y_pred = np.exp(mu)
+
+    if zero_inflated:
+        gate = torch.nn.Sigmoid()(
+            (torch.mul(total_gate_coefs, indeps.T)).sum(dim=0)
+        )
+        y_pred *= 1 - gate
 
     return y_pred
 
