@@ -19,18 +19,22 @@ LABELS = [
 
 # only_type should be one of 0, 1, 2, or 3, corresponding to the type of post.
 def plot_predictions(
-    original_p_data,
     y,
+    original_p_data,
     p_types,
-    p_data_pred,
     y_pred,
-    p_types_pred,
+    p_data_pred=None,
+    p_types_pred=None,
     indep=1,
     only_type=None,
     log_scale=True,
     filename="predictions.png",
     **scatter_kwargs,
 ):
+    if p_data_pred is None:
+        p_data_pred = original_p_data
+    if p_types_pred is None:
+        p_types_pred = p_types
 
     plt.figure(figsize=(12, 9))
 
@@ -83,17 +87,21 @@ def plot_predictions(
 
 
 def plot_predictions_by_subreddit(
-    original_p_data,
     y,
+    original_p_data,
     p_subreddits,
-    p_data_pred,
     y_pred,
+    p_data_pred,
     p_subreddits_pred,
     indep=1,
     log_scale=True,
     **scatter_kwargs,
 ):
-
+    if p_data_pred is None:
+        p_data_pred = original_p_data
+    if p_subreddits_pred is None:
+        p_subreddits_pred = p_subreddits
+    
     plt.figure(figsize=(12, 9))
 
     subreddits = np.unique(p_subreddits)
@@ -345,7 +353,7 @@ def plot_residuals_by_type(y, y_pred, p_types):
 
 def plot_pp_hdi(samples, original_p_data, y, hdi_prob=0.99, log_scale=False):
     original_x_data = original_p_data[:, 1].detach().numpy()
-    y_data = samples["obs"].detach().numpy()[0, :, :]
+    y_data = samples["obs"][0, :, :]
     sorted_indices = np.argsort(original_x_data)
     original_x_sorted = original_x_data[sorted_indices]
     y_sorted = y_data[:, sorted_indices]
