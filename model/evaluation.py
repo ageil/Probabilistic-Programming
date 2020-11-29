@@ -418,7 +418,7 @@ def plot_expectations(y, p_types):
         plt.legend()
     plt.suptitle("Type Distributions and Expected Values")
     plt.xlabel("Log Total Comments (Engagement)")
-    plt.tight_layout()
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
 
 
 def MAE(y, y_hat):
