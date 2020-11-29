@@ -101,7 +101,7 @@ def plot_predictions_by_subreddit(
         p_data_pred = original_p_data
     if p_subreddits_pred is None:
         p_subreddits_pred = p_subreddits
-    
+
     plt.figure(figsize=(12, 9))
 
     subreddits = np.unique(p_subreddits)
@@ -351,33 +351,54 @@ def plot_residuals_by_type(y, y_pred, p_types):
         )
 
 
-def plot_pp_hdi(samples, original_p_data, y, hdi_prob=0.99, log_scale=False):
+def plot_pp_hdi(
+    samples, original_p_data, y, hdi_prob=0.99, log_scale=False, limit=False
+):
     original_x_data = original_p_data[:, 1].detach().numpy()
-    y_data = samples["obs"][0, :, :]
+    y_data = samples["obs"].detach().numpy()[:, :, :]
     sorted_indices = np.argsort(original_x_data)
     original_x_sorted = original_x_data[sorted_indices]
-    y_sorted = y_data[:, sorted_indices]
+    y_sorted = y_data[:, :, sorted_indices]
 
-    az.plot_hdi(
-        original_x_sorted,
-        y_sorted,
-        color="k",
-        plot_kwargs={"ls": "--"},
-        hdi_prob=hdi_prob,
-        fill_kwargs={"label": f"{100*hdi_prob}% HDI"},
+    hdi_data = az.hdi(y_sorted, hdi_prob=hdi_prob)
+
+    x_unique = np.unique(original_x_sorted)
+    y_bounds = np.empty((x_unique.shape[0], 2))
+
+    for i, x in enumerate(x_unique):
+        y_bounds[i, 1] = np.max(hdi_data[original_x_sorted == x, 1])
+        y_bounds[i, 0] = np.min(hdi_data[original_x_sorted == x, 0])
+
+    # take the worst case across all observations for this x
+
+    plt.fill_between(
+        x_unique,
+        y_bounds[:, 0],
+        y_bounds[:, 1],
+        color="tab:gray",
+        label=f"{100*hdi_prob}% HDI",
     )
+
     if log_scale:
         plt.xscale("log")
         plt.yscale("log")
     plt.plot(
-        original_x_sorted, np.mean(y_sorted, axis=0), "C6", label="Mean Pred"
+        original_x_sorted,
+        np.mean(y_sorted[0, :, :], axis=0),
+        "C6",
+        label="Mean Pred",
     )
+    if limit:
+        plt.xlim(-1, 10)
+        plt.ylim(-1, 50)
     plt.scatter(original_x_data, y, s=12, alpha=0.1, label="Observed")
     plt.title("HDI Posterior Predictive Plot")
     plt.xlabel("Num Comments in First Hour")
     plt.ylabel("Num Comments Total")
     plt.legend()
     plt.show()
+
+    return hdi_data
 
 
 def plot_expectations(y, p_types):
