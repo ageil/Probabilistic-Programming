@@ -382,8 +382,8 @@ def plot_expectations(y, p_types):
         [real_news_correction, fake_news_correction],
     ]
     labels = [
-        ["Real News", "Fake News"],
-        ["Correction on Real", "Correction on Fake"],
+        ["Factual news", "Fake news"],
+        ["Correction on factual", "Correction on fake"],
     ]
     colors = [["tab:green", "tab:red"], ["tab:green", "tab:red"]]
     plt.figure(figsize=(15, 6))
@@ -418,7 +418,7 @@ def plot_expectations(y, p_types):
         plt.legend()
     plt.suptitle("Type Distributions and Expected Values")
     plt.xlabel("Log Total Comments (Engagement)")
-    plt.tight_layout()
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
 
 
 def MAE(y, y_hat):
