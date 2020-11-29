@@ -1,3 +1,5 @@
+from collections import defaultdict
+
 import arviz as az
 import matplotlib.pyplot as plt
 import numpy as np
@@ -338,27 +340,31 @@ def plot_residuals_by_type(y, y_pred, p_types):
         )
 
 
-def plot_pp_hdi(samples, p_data, y, hdi_prob=0.99):
-    x_data = p_data[:, 1].detach().numpy()
+def plot_pp_hdi(samples, original_p_data, y, hdi_prob=0.99, log_scale=False):
+    original_x_data = original_p_data[:, 1].detach().numpy()
     y_data = samples["obs"].detach().numpy()[0, :, :]
-    sorted_indices = np.argsort(x_data)
-    x_sorted = x_data[sorted_indices]
+    sorted_indices = np.argsort(original_x_data)
+    original_x_sorted = original_x_data[sorted_indices]
     y_sorted = y_data[:, sorted_indices]
 
     az.plot_hdi(
-        x_sorted,
+        original_x_sorted,
         y_sorted,
         color="k",
         plot_kwargs={"ls": "--"},
         hdi_prob=hdi_prob,
         fill_kwargs={"label": f"{100*hdi_prob}% HDI"},
     )
-    plt.yscale("log")
-    plt.plot(x_sorted, np.mean(y_sorted, axis=0), "C6", label="Mean Pred")
-    plt.scatter(p_data[:, 1], y, s=12, alpha=0.1, label="Observed")
+    if log_scale:
+        plt.xscale("log")
+        plt.yscale("log")
+    plt.plot(
+        original_x_sorted, np.mean(y_sorted, axis=0), "C6", label="Mean Pred"
+    )
+    plt.scatter(original_x_data, y, s=12, alpha=0.1, label="Observed")
     plt.title("HDI Posterior Predictive Plot")
-    plt.xlabel("log num comments 1st hour")
-    plt.ylabel("num total comments")
+    plt.xlabel("Num Comments in First Hour")
+    plt.ylabel("Num Comments Total")
     plt.legend()
     plt.show()
 
@@ -433,17 +439,22 @@ def R2(y, y_hat):
     return R2
 
 
-def evaluate(results, y, y_pred, partition='train', model='post', print_out=False):
+def evaluate(
+    results, y, y_pred, partition="train", model="post", print_out=False
+):
     if results is None:
         results = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
-    results[partition][model]['R^2'] = R2(y, y_pred)
-    results[partition][model]['R^2_log'] = R2(np.log(y+1), np.log(y_pred+1))
-    results[partition][model]['MAE'] = MAE(y, y_pred)
-    results[partition][model]['MAE_log'] = MAE(np.log(y+1), np.log(y_pred+1))
+    results[partition][model]["R^2"] = R2(y, y_pred)
+    results[partition][model]["R^2_log"] = R2(
+        np.log(y + 1), np.log(y_pred + 1)
+    )
+    results[partition][model]["MAE"] = MAE(y, y_pred)
+    results[partition][model]["MAE_log"] = MAE(
+        np.log(y + 1), np.log(y_pred + 1)
+    )
     if print_out:
-        print("R^2:\t\t", results[partition][model]['R^2'])
-        print("R^2 (log):\t", results[partition][model]['R^2_log'])
-        print("MAE:\t\t", results[partition][model]['MAE'])
-        print("MAE (log):\t", results[partition][model]['MAE_log'])
+        print("R^2:\t\t", results[partition][model]["R^2"])
+        print("R^2 (log):\t", results[partition][model]["R^2_log"])
+        print("MAE:\t\t", results[partition][model]["MAE"])
+        print("MAE (log):\t", results[partition][model]["MAE_log"])
     return results
-
