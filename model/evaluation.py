@@ -315,7 +315,6 @@ def plot_ppc_grid(samples, y):
     plt.legend(
         bbox_to_anchor=(1.05, 1.05), loc="lower left", borderaxespad=0.0
     )
-    #    plt.legend(loc='lower center', bbox_to_anchor = (0,-0.1,1,1))
     plt.tight_layout()
 
 
