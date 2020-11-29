@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from pyro.infer import Predictive
 from pyro.ops.stats import quantile
+from collections import defaultdict
 
 P_INDEP_DICT = {1: "Comments in First Hour", 2: "Subscribers"}
 
@@ -235,7 +236,8 @@ def plot_pp_pdf(inf_data, y):
 
 
 # func should calculate the ppc along axis 0.
-def plot_ppc(svi_samples, y, func, label, title=None, log_stats=True, log_freqs=False, legend=True, show=True):
+def plot_ppc(svi_samples, y, func, label, title=None, log_stats=True, 
+             log_freqs=False, legend=True, show=True):
     y = np.array(y)
     obs_per_draw = len(y)
     stats = func(svi_samples["obs"].reshape(-1, obs_per_draw).T)
@@ -263,24 +265,29 @@ def plot_ppc(svi_samples, y, func, label, title=None, log_stats=True, log_freqs=
     if show:
         plt.show()
 
+
 def plot_ppc_grid(samples, y):
     zero_func = lambda x: (x==0).mean(axis=0)
     max_func = lambda x: np.max(x, axis=0)
     var_func = lambda x: np.var(x, axis=0)
     mean_func = lambda x: np.mean(np.log(x+1), axis=0)
-    
+
     funcs = [zero_func, max_func, mean_func, var_func]
-    titles = ["Predicted zeros (%)", "Predicted max", "Predicted variance", "Predicted non-zero mean"]
+    titles = ["Predicted zeros (%)", "Predicted max", 
+              "Predicted variance", "Predicted non-zero mean"]
     labels = ["fraction zeros", "max", "variance", "non-zero mean"]
-    
+
     plt.figure(figsize=(12,8))
     for i, (func, title, label) in enumerate(zip(funcs, titles, labels)):
         plt.subplot(2, 2, i + 1)
         log_stats = (i == 1) or (i == 3)
-        plot_ppc(samples, y, func, label=label, title=title, legend=False, show=False, log_stats=log_stats)
+        legend = i == 3
+        plot_ppc(samples, y, func, label=label, 
+                 title=title, legend=legend, 
+                 show=False, log_stats=log_stats)
     plt.tight_layout()
-    
-# TODO plot by type.
+
+
 def plot_residuals(y, y_pred, title="Residuals (Obs - Pred)"):
     residuals = y - y_pred
 
@@ -398,3 +405,18 @@ def R2(y, y_hat):
     TSS = np.sum((y - np.mean(y)) ** 2)
     R2 = 1 - SSE / TSS
     return R2
+
+
+def evaluate(results, y, y_pred, partition='train', model='post', print_out=False):
+    if results is None:
+        results = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
+    results[partition][model]['R^2'] = R2(y, y_pred)
+    results[partition][model]['R^2_log'] = R2(np.log(y+1), np.log(y_pred+1))
+    results[partition][model]['MAE'] = MAE(y, y_pred)
+    results[partition][model]['MAE_log'] = MAE(np.log(y+1), np.log(y_pred+1))
+    if print_out:
+        print("R^2:\t\t", results[partition][model]['R^2'])
+        print("R^2 (log):\t", results[partition][model]['R^2_log'])
+        print("MAE:\t\t", results[partition][model]['MAE'])
+        print("MAE (log):\t", results[partition][model]['MAE_log'])
+    return results
