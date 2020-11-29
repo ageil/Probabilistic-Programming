@@ -119,3 +119,19 @@ def get_t_means(p_types, t_data):
     phi_loc = torch.matmul(eta_loc, t_data.T)
     t_means = get_means(phi_loc, p_types)
     return t_means
+
+
+def get_centered_phi(p_types, t_data):
+    t_means = get_t_means(p_types, t_data)
+    eta_loc = pyro.param("eta_loc").detach()
+    phi_loc = torch.matmul(eta_loc, t_data.T)
+    centered_phi = phi_loc - t_means
+    return centered_phi
+
+
+def get_centered_rho(p_subreddits, r_data):
+    r_means = get_r_means(p_subreddits, r_data)
+    tau_loc = pyro.param("tau_loc").detach()
+    rho_loc = torch.matmul(tau_loc, r_data.T)
+    centered_rho = rho_loc - r_means
+    return centered_rho
