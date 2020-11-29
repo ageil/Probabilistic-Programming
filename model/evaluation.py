@@ -91,8 +91,8 @@ def plot_predictions_by_subreddit(
     original_p_data,
     p_subreddits,
     y_pred,
-    p_data_pred,
-    p_subreddits_pred,
+    p_data_pred=None,
+    p_subreddits_pred=None,
     indep=1,
     log_scale=True,
     **scatter_kwargs,
@@ -151,7 +151,7 @@ def plot_predictions_by_subreddit(
         plt.ylim(y_min, y_max)
         plt.title(subreddit_label)
     plt.suptitle("Predictions by Subreddit")
-    plt.tight_layout()
+    plt.tight_layout(rect=[0, 0.03, 1, 0.95])
 
 
 def get_samples(model, guide, *args, num_samples=1000, detach=True):
