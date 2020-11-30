@@ -99,6 +99,7 @@ def plot_predictions_by_subreddit(
     p_subreddits_pred=None,
     indep=1,
     log_scale=True,
+    filename="predictions.png",
     alpha=0.2,
     **scatter_kwargs,
 ):
@@ -157,6 +158,7 @@ def plot_predictions_by_subreddit(
         plt.ylim(y_min, 2 * y_max)
         plt.title(subreddit_label)
     plt.suptitle("Predictions by Subreddit")
+    plt.savefig(f"../output/{filename}")
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
 
 
@@ -290,7 +292,7 @@ def plot_ppc(
         plt.show()
 
 
-def plot_ppc_grid(samples, y):
+def plot_ppc_grid(samples, y, filename="ppc.png"):
     def zero_func(x):
         return (x == 0).mean(axis=0)
 
@@ -329,10 +331,10 @@ def plot_ppc_grid(samples, y):
     plt.legend(
         bbox_to_anchor=(1.05, 1.05), loc="lower left", borderaxespad=0.0
     )
+    plt.savefig(f"../output/{filename}")
     plt.tight_layout()
 
 
-# TODO plot by type.
 def plot_residuals(y, y_pred, title="Residuals (Obs - Pred)"):
     residuals = y - y_pred
 
@@ -358,7 +360,13 @@ def plot_residuals_by_type(y, y_pred, p_types):
 
 
 def plot_pp_hdi(
-    samples, original_p_data, y, hdi_prob=0.99, log_scale=True, limit=False
+    samples,
+    original_p_data,
+    y,
+    hdi_prob=0.99,
+    log_scale=True,
+    limit=False,
+    filename="hdi.png",
 ):
     original_x_data = original_p_data[:, 1].detach().numpy()
     y_data = samples["obs"]
@@ -405,6 +413,7 @@ def plot_pp_hdi(
     plt.xlabel("Num Comments in First Hour")
     plt.ylabel("Num Comments Total")
     plt.legend()
+    plt.savefig(f"../output/{filename}")
     plt.show()
 
 
@@ -454,6 +463,7 @@ def plot_expectations(y, p_types):
         plt.legend()
     plt.suptitle("Type Distributions and Expected Values")
     plt.xlabel("Log Future Comments (Engagement)")
+    plt.savefig("../output/expectations.png")
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
 
 

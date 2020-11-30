@@ -70,7 +70,7 @@ def run_svi(
     return svi, losses
 
 
-def plot_losses(losses, log_scale=True, skip_first=0):
+def plot_losses(losses, log_scale=True, skip_first=0, filename="losses.png"):
     plt.figure(figsize=(10, 4))
     plt.plot(range(len(losses[skip_first:])), np.array(losses[skip_first:]))
     plt.xlabel("Iteration")
@@ -78,4 +78,5 @@ def plot_losses(losses, log_scale=True, skip_first=0):
     if log_scale:
         plt.yscale("log")
     plt.title("Learning Curve")
+    plt.savefig(f"../output/{filename}")
     plt.tight_layout()
