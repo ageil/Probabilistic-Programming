@@ -78,5 +78,5 @@ def plot_losses(losses, log_scale=True, skip_first=0, filename="losses.png"):
     if log_scale:
         plt.yscale("log")
     plt.title("Learning Curve")
-    plt.savefig(f"../output/{filename}")
+    plt.savefig(f"../output/{filename}", bbox_inches='tight')
     plt.tight_layout()

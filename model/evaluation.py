@@ -158,8 +158,9 @@ def plot_predictions_by_subreddit(
         plt.ylim(y_min, 2 * y_max)
         plt.title(subreddit_label)
     plt.suptitle("Predictions by Subreddit")
-    plt.savefig(f"../output/{filename}")
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.savefig(f"../output/{filename}", bbox_inches='tight')
+
 
 
 def get_samples(model, guide, *args, num_samples=1000, detach=True):
@@ -307,12 +308,12 @@ def plot_ppc_grid(samples, y, filename="ppc.png"):
 
     funcs = [zero_func, max_func, mean_func, var_func]
     titles = [
-        "Predicted zeros (%)",
-        "Predicted max",
-        "Predicted variance",
-        "Predicted non-zero mean",
+        "Predicted Zeros (%)",
+        "Predicted Max",
+        "Predicted Variance",
+        "Predicted Non-Zero Mean",
     ]
-    labels = ["fraction zeros", "max", "variance", "non-zero mean"]
+    labels = ["Fraction Zeros", "Max", "Variance", "Non-Zero Mean"]
 
     plt.figure(figsize=(12, 8))
     for i, (func, title, label) in enumerate(zip(funcs, titles, labels)):
@@ -331,8 +332,8 @@ def plot_ppc_grid(samples, y, filename="ppc.png"):
     plt.legend(
         bbox_to_anchor=(1.05, 1.05), loc="lower left", borderaxespad=0.0
     )
-    plt.savefig(f"../output/{filename}")
     plt.tight_layout()
+    plt.savefig(f"../output/{filename}", bbox_inches='tight')
 
 
 def plot_residuals(y, y_pred, title="Residuals (Obs - Pred)"):
@@ -394,9 +395,9 @@ def plot_pp_hdi(
     plt.figure(figsize=(12, 8))
 
     plt.fill_between(
-        x_unique,
-        y_bounds[:, 0],
-        y_bounds[:, 1],
+        x_unique+1,
+        y_bounds[:, 0]+1,
+        y_bounds[:, 1]+1,
         color="tab:gray",
         label=f"{100*hdi_prob}% HDI",
     )
@@ -404,14 +405,14 @@ def plot_pp_hdi(
     if log_scale:
         plt.xscale("log")
         plt.yscale("log")
-    plt.plot(x_unique, y_means, "C6", label="Mean Pred")
+    plt.plot(x_unique+1, y_means+1, "C6", label="Mean Pred")
     if limit:
         plt.xlim(-1, 10)
         plt.ylim(-1, 50)
-    plt.scatter(original_x_data, y, s=12, alpha=0.1, label="Observed")
+    plt.scatter(original_x_data+1, y+1, s=12, alpha=0.1, label="Observed")
     plt.title("HDI Posterior Predictive Plot")
-    plt.xlabel("Num Comments in First Hour")
-    plt.ylabel("Num Comments Total")
+    plt.xlabel("Comments in First Hour (+1)")
+    plt.ylabel("Future Comments (+1)")
     plt.legend()
     plt.savefig(f"../output/{filename}")
     plt.show()
@@ -463,8 +464,8 @@ def plot_expectations(y, p_types):
         plt.legend()
     plt.suptitle("Type Distributions and Expected Values")
     plt.xlabel("Log Future Comments (Engagement)")
-    plt.savefig("../output/expectations.png")
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
+    plt.savefig("../output/expectations.png", bbox_inches='tight')
 
 
 def MAE(y, y_hat):
