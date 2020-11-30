@@ -1,12 +1,14 @@
-# Final Project Repository Template
+# Final Project
 
-This is the final project repository template for [Machine Learning with Probabilistic Programming](http://www.proditus.com/mlpp2020).
+This is the repository for Anders Geil and Marcus Daly's Final Project for Machine Learning with Probabilistic Programming.
 
-## Duplicating your own copy of this repository
+## Python Version
+We use 3.8.5, but 3.8.5+ should work.
 
-Please follow these [instructions](https://help.github.com/articles/duplicating-a-repository/) to make a copy of this repository and push it to your own GitHub account.
+## Development Note:
+To develop with pre-commit hooks, make sure to run `pre-commit install` before making your first commit.
 
-Make sure to create a **new repository** on your own GitHub account before starting this process.
+# Template
 
 ## Final Project Notebook
 
@@ -73,6 +75,3 @@ The first thing we will do after cloning your repository is:
 ```
 
 If your repository fails any checks, we will **deduct 20%** from your final project grade.
-
-### Development Note:
-To develop with pre-commit hooks, make sure to run `pre-commit install` before making your first commit.
