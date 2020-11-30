@@ -6,6 +6,7 @@ import numpy as np
 import torch
 from pyro.infer import Predictive
 from pyro.ops.stats import quantile
+from tabulate import tabulate
 
 P_INDEP_DICT = {1: "Comments in First Hour", 2: "Subscribers"}
 
@@ -492,8 +493,16 @@ def evaluate(results, y, y_pred, partition="train", model="post"):
     results[partition][model]["R^2 log non-zero"] = np.round(
         R2log(y, y_pred), 2
     )
-    results[partition][model]["MAE"] = np.round(MAE(y, y_pred), 2)
-    results[partition][model]["MAE log non-zero"] = np.round(
-        MAElog(y, y_pred), 2
-    )
     return results
+
+
+def print_results(results, partition="train"):
+    model_results = results[partition]
+    models = list(model_results.keys())
+
+    stats = list(model_results["type"].keys())
+    vals = [stats] + [list(model_results[model].values()) for model in models]
+    vals = np.asarray(vals).T
+
+    headers = [""] + models
+    print(tabulate(vals, headers=headers))
