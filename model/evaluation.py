@@ -159,8 +159,7 @@ def plot_predictions_by_subreddit(
         plt.title(subreddit_label)
     plt.suptitle("Predictions by Subreddit")
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    plt.savefig(f"../output/{filename}", bbox_inches='tight')
-
+    plt.savefig(f"../output/{filename}", bbox_inches="tight")
 
 
 def get_samples(model, guide, *args, num_samples=1000, detach=True):
@@ -333,7 +332,7 @@ def plot_ppc_grid(samples, y, filename="ppc.png"):
         bbox_to_anchor=(1.05, 1.05), loc="lower left", borderaxespad=0.0
     )
     plt.tight_layout()
-    plt.savefig(f"../output/{filename}", bbox_inches='tight')
+    plt.savefig(f"../output/{filename}", bbox_inches="tight")
 
 
 def plot_residuals(y, y_pred, title="Residuals (Obs - Pred)"):
@@ -395,9 +394,9 @@ def plot_pp_hdi(
     plt.figure(figsize=(12, 8))
 
     plt.fill_between(
-        x_unique+1,
-        y_bounds[:, 0]+1,
-        y_bounds[:, 1]+1,
+        x_unique + 1,
+        y_bounds[:, 0] + 1,
+        y_bounds[:, 1] + 1,
         color="tab:gray",
         label=f"{100*hdi_prob}% HDI",
     )
@@ -405,11 +404,11 @@ def plot_pp_hdi(
     if log_scale:
         plt.xscale("log")
         plt.yscale("log")
-    plt.plot(x_unique+1, y_means+1, "C6", label="Mean Pred")
+    plt.plot(x_unique + 1, y_means + 1, "C6", label="Mean Pred")
     if limit:
         plt.xlim(-1, 10)
         plt.ylim(-1, 50)
-    plt.scatter(original_x_data+1, y+1, s=12, alpha=0.1, label="Observed")
+    plt.scatter(original_x_data + 1, y + 1, s=12, alpha=0.1, label="Observed")
     plt.title("HDI Posterior Predictive Plot")
     plt.xlabel("Comments in First Hour (+1)")
     plt.ylabel("Future Comments (+1)")
@@ -465,7 +464,7 @@ def plot_expectations(y, p_types):
     plt.suptitle("Type Distributions and Expected Values")
     plt.xlabel("Log Future Comments (Engagement)")
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
-    plt.savefig("../output/expectations.png", bbox_inches='tight')
+    plt.savefig("../output/expectations.png", bbox_inches="tight")
 
 
 def MAE(y, y_hat):
