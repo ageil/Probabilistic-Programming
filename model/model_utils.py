@@ -2,6 +2,13 @@ import numpy as np
 import pyro
 import torch
 
+LABELS = [
+    "Factual News",
+    "Fake News",
+    "Review of Factual News",
+    "Review of Fake News",
+]
+
 
 def get_y_pred(
     p_data,
@@ -180,3 +187,20 @@ def get_centered_rho(p_subreddits, r_data):
     rho_loc = torch.matmul(tau_loc, r_data.T)
     centered_rho = rho_loc - r_means
     return centered_rho
+
+
+def print_labeled_type_coefs(
+    p_types, p_stories, p_subreddits, t_data, s_data, r_data
+):
+    eta_loc = pyro.param("eta_loc").detach()
+    phi_loc = torch.matmul(eta_loc, t_data.T)
+
+    expected_phi = (
+        phi_loc
+        + get_s_means(p_stories, s_data)
+        + get_r_means(p_subreddits, r_data)
+    )
+
+    print("log 1st Hour Comments Coefficient for Type:")
+    for i, label in enumerate(LABELS):
+        print(f"\t{label}: {expected_phi[1, i]:.3}")

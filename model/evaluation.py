@@ -29,6 +29,7 @@ def plot_predictions(
     only_type=None,
     log_scale=True,
     filename="predictions.png",
+    alpha=0.2,
     **scatter_kwargs,
 ):
     if p_data_pred is None:
@@ -65,6 +66,7 @@ def plot_predictions(
                 facecolors=face_colors,
                 marker=scatter_style,
                 label=f"Observed {type_label}",
+                alpha=alpha,
                 **scatter_kwargs,
             )
             plt.plot(
@@ -76,7 +78,7 @@ def plot_predictions(
             )
 
     plt.xlabel(P_INDEP_DICT[indep] + " (+1)")
-    plt.ylabel("Total Comments (+1)")
+    plt.ylabel("Future Comments (+1)")
 
     if log_scale:
         plt.yscale("log")
@@ -96,6 +98,7 @@ def plot_predictions_by_subreddit(
     p_subreddits_pred=None,
     indep=1,
     log_scale=True,
+    alpha=0.2,
     **scatter_kwargs,
 ):
     if p_data_pred is None:
@@ -110,17 +113,17 @@ def plot_predictions_by_subreddit(
     rows = int(np.ceil(np.sqrt(len(subreddits))))
     cols = int(np.ceil(len(subreddits) / rows))
 
-    x_min = 1e-1
+    x_min = 1
     x_max = max(original_p_data[:, indep])
-    y_min = 1e-1
+    y_min = 1
     y_max = max(y)
 
     for i, r in enumerate(subreddits):
-        x_pred_r = p_data_pred[p_subreddits_pred == r, indep]
-        y_pred_r = y_pred[p_subreddits_pred == r]
+        x_pred_r = p_data_pred[p_subreddits_pred == r, indep] + 1
+        y_pred_r = y_pred[p_subreddits_pred == r] + 1
 
-        x_r = original_p_data[p_subreddits == r, indep]
-        y_r = y[p_subreddits == r]
+        x_r = original_p_data[p_subreddits == r, indep] + 1
+        y_r = y[p_subreddits == r] + 1
 
         sorted_indices_pred = np.argsort(x_pred_r)
 
@@ -132,6 +135,7 @@ def plot_predictions_by_subreddit(
             y_r,
             s=12,
             label=f"Observed {subreddit_label}",
+            alpha=alpha,
             **scatter_kwargs,
         )
         plt.plot(
@@ -140,8 +144,8 @@ def plot_predictions_by_subreddit(
             label=f"Predicted {subreddit_label}",
         )
 
-        plt.xlabel(P_INDEP_DICT[indep])
-        plt.ylabel("Total Comments")
+        plt.xlabel(P_INDEP_DICT[indep] + " (+1)")
+        plt.ylabel("Future Comments (+1)")
 
         if log_scale:
             plt.yscale("log")
@@ -149,7 +153,7 @@ def plot_predictions_by_subreddit(
         # plt.legend()
 
         plt.xlim(x_min, x_max)
-        plt.ylim(y_min, y_max)
+        plt.ylim(y_min, 2 * y_max)
         plt.title(subreddit_label)
     plt.suptitle("Predictions by Subreddit")
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
@@ -378,6 +382,8 @@ def plot_pp_hdi(
             y_sorted[0, :, original_x_sorted == x], axis=(0, 1)
         )
 
+    plt.figure(figsize=(12, 8))
+
     plt.fill_between(
         x_unique,
         y_bounds[:, 0],
@@ -446,7 +452,7 @@ def plot_expectations(y, p_types):
         plt.ylabel("Probability")
         plt.legend()
     plt.suptitle("Type Distributions and Expected Values")
-    plt.xlabel("Log Total Comments (Engagement)")
+    plt.xlabel("Log Future Comments (Engagement)")
     plt.tight_layout(rect=[0, 0.03, 1, 0.95])
 
 
