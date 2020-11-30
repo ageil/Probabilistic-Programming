@@ -1,6 +1,10 @@
 from complete_model import complete_guide, complete_model
-from data_proc import (load_raw_data, processData, split_and_prep_data,
-                       transform_data)
+from data_proc import (
+    load_raw_data,
+    processData,
+    split_and_prep_data,
+    transform_data,
+)
 from evaluation import evaluate, get_samples
 from inference import run_svi
 from model_utils import get_y_pred
